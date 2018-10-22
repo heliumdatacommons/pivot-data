@@ -1,0 +1,31 @@
+- name: Install Docker dependencies
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+    update_cache: true
+    autoremove: true
+
+- name: Add Docker CE official GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker CE repository
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable
+    state: present
+
+- name: Install Docker CE
+  apt:
+    name: docker-ce
+    update_cache: true
+
+- name: Add sudo user to "docker" group
+  user:
+    name: "{{ ansible_ssh_user }}"
+    groups: docker
+    append: true
+  become: true

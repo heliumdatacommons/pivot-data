@@ -1,0 +1,35 @@
+- include_tasks: create_hosts.yml
+  with_items: "{{ zone }}"
+  loop_control:
+    loop_var: _zone
+
+- name: Wait for host creation to finish
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: hosts
+  until: hosts.finished
+  with_items: "{{ _created_instances.results }}"
+  delay: 6
+  retries: 10
+
+- name: Check SSH
+  wait_for:
+    host: "{{ item }}"
+    port: 22
+    delay: 5
+    timeout: 300
+  when: >
+    'benchmark' in groups
+  with_items: "{{ groups.benchmark }}"
+  register: _check_ssh
+  async: 300
+  poll: 0
+
+- name: Wait for SSH checking results
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: _job
+  with_items: "{{ _check_ssh.results }}"
+  until: _job.finished
+  delay: 5
+  retries: 10

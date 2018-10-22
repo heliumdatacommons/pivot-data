@@ -1,0 +1,22 @@
+- name: Create attached disk(s) for host(s) at {{ _zone.name }}
+  gce_pd:
+    name: benchmark-{{ _zone.name }}-{{ _seq }}-{{ item.1.name }}
+    instance_name: benchmark-{{ _zone.name }}-{{ _seq }}
+    zone: "{{ _zone.name }}"
+    disk_type: "{{ item.1.type }}"
+    size_gb: "{{ item.1.size }}"
+    mode: "{{ item.1.mode }}"
+    delete_on_termination: "{{ item.1.delete_on_termination }}"
+  with_indexed_items: "{{ disks[1:] }}"
+  register: _create_attached_disks
+  async: 600
+  poll: 0
+
+- name: Wait for attached disk creation to finish
+  async_status:
+    jid: "{{ item.ansible_job_id }}"
+  register: _attached_disks
+  until: _attached_disks.finished
+  with_items: "{{ _create_attached_disks.results }}"
+  delay: 6
+  retries: 10

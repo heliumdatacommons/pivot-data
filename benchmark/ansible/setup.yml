@@ -1,0 +1,15 @@
+- hosts: localhost
+  roles:
+    - create_hosts
+
+- hosts: benchmark
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Install Python
+      raw: apt-get update && apt-get install -y python
+
+- hosts: benchmark
+  become: true
+  roles:
+    - install_common_packages
