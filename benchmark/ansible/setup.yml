@@ -1,15 +1,19 @@
 - hosts: localhost
+  gather_facts: false
   roles:
     - create_hosts
 
-- hosts: benchmark
+- hosts: all
   gather_facts: false
   become: true
   tasks:
     - name: Install Python
       raw: apt-get update && apt-get install -y python
 
-- hosts: benchmark
+- hosts: all
+  gather_facts: false
   become: true
   roles:
     - install_common_packages
+
+- import_playbook: playbooks/{{ fs }}/main.yml

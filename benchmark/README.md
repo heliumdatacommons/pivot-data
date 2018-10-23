@@ -77,7 +77,7 @@ The filesystem solutions to be evaluated are listed as below:
 - Ceph RBD + NFSv4
 - GlusterFS + NFS-Ganesha
 
-In addition, some solutions provide multiple configurations (not for performance tunning) for 
+In addition, some solutions provide multiple configurations (not for performance tuning) for 
 different use cases, which are likely to impact the performance, *e.g.*, the 
 [GlusterFS volume type](https://docs.gluster.org/en/v3/Administrator%20Guide/Setting%20Up%20Volumes/), 
 distribution of backend Ceph OSDs. 

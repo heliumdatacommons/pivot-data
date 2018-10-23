@@ -18,9 +18,7 @@
     port: 22
     delay: 5
     timeout: 300
-  when: >
-    'benchmark' in groups
-  with_items: "{{ groups.benchmark }}"
+  with_items: "{{ groups[mode] }}"
   register: _check_ssh
   async: 300
   poll: 0

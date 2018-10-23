@@ -1,7 +1,7 @@
 - name: Create attached disk(s) for host(s) at {{ _zone.name }}
   gce_pd:
-    name: benchmark-{{ _zone.name }}-{{ _seq }}-{{ item.1.name }}
-    instance_name: benchmark-{{ _zone.name }}-{{ _seq }}
+    name: benchmark-{{ _zone.name }}-{{ fs }}-{{ _seq }}-{{ item.1.name }}
+    instance_name: benchmark-{{ _zone.name }}-{{ fs }}-{{ _seq }}
     zone: "{{ _zone.name }}"
     disk_type: "{{ item.1.type }}"
     size_gb: "{{ item.1.size }}"

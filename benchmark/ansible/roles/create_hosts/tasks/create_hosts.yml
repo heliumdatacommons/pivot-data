@@ -1,6 +1,6 @@
 - name: Create boot disk(s) for host(s) at {{ _zone.name }}
   gce_pd:
-    name: benchmark-{{ _zone.name }}-{{ item }}-{{ disks.0.name }}
+    name: benchmark-{{ _zone.name }}-{{ fs }}-{{ item }}-{{ disks.0.name }}
     zone: "{{ _zone.name }}"
     disk_type: "{{ disks.0.type }}"
     size_gb: "{{ disks.0.size }}"
@@ -22,18 +22,19 @@
 
 - name: Create {{ _zone.end - _zone.start + 1 }} host(s) at {{ _zone.name }}
   gce:
-    name: benchmark-{{ _zone.name }}-{{ item }}
+    name: benchmark-{{ _zone.name }}-{{ fs }}-{{ item }}
     zone: "{{ _zone.name }}"
     machine_type: "{{ machine_type }}"
     network: "{{ project }}-vpc-{{ _zone.name.split('-')[:2] | join('-') }}"
     subnetwork: "{{ project }}-subnet-{{ _zone.name.split('-')[:2] | join('-') }}"
     state: present
+    preemptible: "{{ preemptible }}"
     metadata:
       block-project-ssh-keys: true
       ssh-keys: "{{ ansible_ssh_user }}:{{ lookup('file', ansible_ssh_public_key_file) }}"
     disk_auto_delete: "{{ disks.0.delete_on_termination }}"
     disks:
-      - name: benchmark-{{ _zone.name }}-{{ item }}-{{ disks.0.name }}
+      - name: benchmark-{{ _zone.name }}-{{ fs }}-{{ item }}-{{ disks.0.name }}
         mode: READ_WRITE
   register: _created_instances
   with_sequence: start={{ _zone.start }} end={{ _zone.end }}
@@ -49,16 +50,24 @@
   delay: 6
   retries: 10
 
+- name: Assign hosts to the server/client group
+  add_host:
+    hostname: "{{ item.1.public_ip }}"
+    groupname: "{{ mode }}"
+  with_subelements:
+    - "{{ hosts.results }}"
+    - instance_data
+
+- name: Assign hosts to the FS group if in `server` mode
+  add_host:
+    hostname: "{{ item.1.public_ip }}"
+    groupname: "{{ fs }}"
+  with_subelements:
+    - "{{ hosts.results }}"
+    - instance_data
+  when: mode == 'server'
+
 - include_tasks: create_attached_disks.yml
   with_sequence: start={{ _zone.start }} end={{ _zone.end }}
   loop_control:
     loop_var: _seq
-
-- name: Assign hosts to the benchmark group
-  add_host:
-    hostname: "{{ item.1.public_ip }}"
-    groupname:
-      - benchmark
-  with_subelements:
-    - "{{ hosts.results }}"
-    - instance_data
