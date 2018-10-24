@@ -72,10 +72,10 @@ performance drop)
 The filesystem solutions to be evaluated are listed as below:
 
 - [x] NFSv4 (baseline)
-- [ ]GlusterFS
-- [x]CephFS
-- [ ]Ceph RBD + NFSv4
-- [ ]GlusterFS + NFS-Ganesha
+- [ ] GlusterFS
+- [x] CephFS
+- [ ] Ceph RBD + NFSv4
+- [ ] GlusterFS + NFS-Ganesha
 
 In addition, some solutions provide multiple configurations (not for performance tuning) for 
 different use cases, which are likely to impact the performance, *e.g.*, the 
