@@ -20,6 +20,17 @@ options:
     nfsd_image: heliumdatacommons/nfsd
     mountpoint: /data
     opts: rw,async,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
+  rbd:
+    name: alpha
+    mon_group_size: 1
+    daemon_image: ceph/daemon:latest-luminous
+    num_pgs: 8
+    unwanted_rbd_features: exclusive-lock object-map fast-diff deep-flatten
+    nfsd_image: heliumdatacommons/nfsd
+    mountpoint: /data
+    opts: rw,async,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
+
+
 disks:
   - name: boot
     type: pd-ssd
@@ -34,7 +45,7 @@ disks:
 zone:
   - name: us-east1-b
     start: 1
-    end: 1
+    end: 3
 #  - name: us-east4
 #    count: 2
 #  - name: us-central1

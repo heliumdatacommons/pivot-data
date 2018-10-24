@@ -2,11 +2,19 @@
   gather_facts: false
   become: true
   tasks:
-    - name: Install Ceph
+    - name: Install NFS kernel
       apt:
         name: nfs-kernel-server
         update_cache: true
         autoremove: true
+
+    - name: Stop NFS server
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+      with_items:
+        - nfs-kernel-server
+        - rpcbind
 
     - name: Load Ceph kernel module
       modprobe:

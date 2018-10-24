@@ -29,13 +29,7 @@
       add_host:
         hostname: "{{ item }}"
         groupname: ceph-mon
-      with_items: "{{ groups[fs][:options.cephfs.mon_group_size] }}"
-
-    - name: Assign host(s) to the CephFS group
-      add_host:
-        hostname: "{{ item }}"
-        groupname: ceph-mds
-      with_items: "{{ groups[fs][:options.cephfs.mds_group_size] }}"
+      with_items: "{{ groups[fs][:options.rbd.mon_group_size] }}"
 
 - hosts: ceph-mon
   become: true
@@ -49,7 +43,7 @@
     - name: Run Ceph Monitor
       docker_container:
         name: ceph-mon
-        image: "{{ options.cephfs.daemon_image }}"
+        image: "{{ options.rbd.daemon_image }}"
         network_mode: host
         command: mon
         volumes:
@@ -62,14 +56,15 @@
     - name: Run Ceph Manager
       docker_container:
         name: ceph-mgr
-        image: "{{ options.cephfs.daemon_image }}"
+        image: "{{ options.rbd.daemon_image }}"
         network_mode: host
         command: mgr
         volumes:
           - /opt/ceph/etc:/etc/ceph
           - /opt/ceph/var/lib:/var/lib/ceph/
 
-- hosts: cephfs
+
+- hosts: rbd
   become: true
   tasks:
     - name: Create Ceph configuration file
@@ -97,7 +92,7 @@
     - name: Zap block devices
       docker_container:
         name: ceph-zap-device
-        image: "{{ options.cephfs.daemon_image }}"
+        image: "{{ options.rbd.daemon_image }}"
         command: zap_device
         privileged: true
         auto_remove: true
@@ -111,7 +106,7 @@
     - name: Run Ceph OSD
       docker_container:
         name: ceph-osd-{{ item }}
-        image: "{{ options.cephfs.daemon_image }}"
+        image: "{{ options.rbd.daemon_image }}"
         network_mode: host
         pid_mode: host
         privileged: true
@@ -124,23 +119,79 @@
           OSD_DEVICE: /dev/{{ item }}
       with_items: "{{ block_devices.stdout_lines }}"
 
-- hosts: ceph-mds
+- hosts: ceph-mon
   gather_facts: false
   become: true
   tasks:
-    - name: Run CephFS
+    - name: Install NFS kernel
+      apt:
+        name: nfs-kernel-server
+        update_cache: true
+        autoremove: true
+
+    - name: Stop NFS server
+      systemd:
+        name: "{{ item }}"
+        state: stopped
+      with_items:
+        - nfs-kernel-server
+        - rpcbind
+
+    - name: Load Ceph kernel module
+      modprobe:
+        name: "{{ item }}"
+        state: present
+      with_items:
+      - nfsd
+      - xfs
+      - nfsv4
+      - rbd
+
+    - name: Create RBD data pool
+      shell: >
+        ceph osd pool create rbd {{ options.rbd.num_pgs }}
+
+    - name: Initialize RBD data pool
+      shell: >
+        rbd pool init rbd
+
+    - name: Create RBD
+      shell: >
+        rbd create {{ options.rbd.name }}
+        --size {{ (groups.rbd | length) * (disks[1:] | sum(attribute='size')) * 1024 }}
+
+    - name: Disable unwanted RBD features
+      shell: >
+        rbd feature disable {{ options.rbd.name }} {{ options.rbd.unwanted_rbd_features }}
+
+    - name: Map the RBD as a local block device
+      shell: >
+        rbd map {{ options.rbd.name }}
+      register: rbd_map_out
+
+    - name: Make XFS on the RBD
+      filesystem:
+        fstype: xfs
+        dev: "{{ rbd_map_out.stdout_lines[0] }}"
+
+    - name: Mount the filesystem to {{ options.rbd.mountpoint }}
+      mount:
+        path: "{{ options.rbd.mountpoint }}"
+        src: "{{ rbd_map_out.stdout_lines[0] }}"
+        fstype: xfs
+        state: present
+
+    - name: Run the NFS server
       docker_container:
-        name: cephfs-{{ options.cephfs.name }}
-        image: "{{ options.cephfs.daemon_image }}"
+        name: nfsv4-server
+        image: "{{ options.rbd.nfsd_image }}"
         network_mode: host
         privileged: true
-        command: mds
         volumes:
-          - /opt/ceph/etc:/etc/ceph
-          - /opt/ceph/var/lib:/var/lib/ceph/
+          - "{{ options.rbd.mountpoint }}:/data"
         env:
-          CEPHFS_CREATE: 1
-          CEPHFS_NAME: "{{ options.cephfs.name }}"
+          NFS_EXPORT_0: /data  *({{ options.rbd.opts }})
+
 
 
 
