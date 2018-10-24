@@ -1,0 +1,18 @@
+EXPORT {
+    Export_Id = 101;
+    Access_Type = RW;
+
+    # mount path of Gluster Volume
+    Path = "{{ options.ganesha.mountpoint }}";
+    FSAL {
+        name = VFS;
+    }
+    # rconfig for root Squash
+    Squash="No_root_squash";
+    # NFSv4 Pseudo path
+    Pseudo="{{ options.ganesha.mountpoint }}";
+}
+LOG {
+    # default log level
+    Default_Log_Level = WARN;
+}

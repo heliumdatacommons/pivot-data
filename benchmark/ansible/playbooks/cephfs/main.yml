@@ -44,7 +44,6 @@
       template:
         src: ceph.conf.mon.j2
         dest: /opt/ceph/etc/ceph.conf
-      become: true
 
     - name: Run Ceph Monitor
       docker_container:

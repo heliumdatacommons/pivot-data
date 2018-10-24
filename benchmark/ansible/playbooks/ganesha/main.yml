@@ -1,0 +1,54 @@
+- hosts: "{{ fs }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Install NFS Ganesha for VFS
+      apt:
+        name:
+        - nfs-ganesha-vfs
+        update_cache: true
+
+    - name: Find attached block devices
+      shell: >
+        lsblk -J | jq '.blockdevices[]
+        | select(.type == "disk")
+        | select(.name != "sda")
+        | .name' | sed 's/"//g'
+      register: block_devices
+
+    - name: Make XFS on the 1st block device
+      filesystem:
+        fstype: xfs
+        dev: /dev/{{ block_devices.stdout_lines[0] }}
+
+    - name: Create {{ options.ganesha.mountpoint }}
+      file:
+        path: "{{ options.ganesha.mountpoint }}"
+        state: directory
+        recurse: true
+
+    - name: Mount the filesystem to {{ options.ganesha.mountpoint }}
+      mount:
+        path: "{{ options.ganesha.mountpoint }}"
+        src: /dev/{{ block_devices.stdout_lines[0] }}
+        fstype: xfs
+        state: present
+
+    - name: Populate the NFS Ganesha configuration
+      template:
+        src: ganesha.conf.j2
+        dest: /etc/ganesha/ganesha.conf
+
+    - name: Restart NFS Ganesha
+      systemd:
+        name: nfs-ganesha
+        state: restarted
+
+
+
+
+
+
+
+
+

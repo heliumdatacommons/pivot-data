@@ -1,0 +1,116 @@
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Select the first host as the GlusterFS admin host
+      add_host:
+        hostname: "{{ groups[fs].0 }}"
+        groupname: glusterfs-admin
+
+- hosts: "{{ fs }}"
+  become: true
+  tasks:
+    - name: Add GlusterFS repo
+      apt_repository:
+        repo: ppa:gluster/glusterfs-{{ options.gfganesha.version }}
+
+    - name: Install GlusterFS server and NFS Ganesha
+      apt:
+        name:
+          - glusterfs-server
+          - nfs-ganesha-gluster
+        update_cache: true
+
+    - name: Start GlusterFS
+      systemd:
+        name: glusterd
+        state: started
+        enabled: true
+
+    - name: Find attached block devices
+      shell: >
+        lsblk -J | jq '.blockdevices[]
+        | select(.type == "disk")
+        | select(.name != "sda")
+        | .name' | sed 's/"//g'
+      register: block_devices
+
+    - name: Create mountpoints for the block devices
+      file:
+        path: /brick/{{ item }}
+        state: directory
+      with_items: "{{ block_devices.stdout_lines }}"
+
+    - name: Make XFS on the block devices
+      filesystem:
+        fstype: xfs
+        dev: /dev/{{ item }}
+      with_items: "{{ block_devices.stdout_lines }}"
+
+    - name: Mount the block devices
+      mount:
+        path: /brick/{{ item }}"
+        src: /dev/{{ item }}
+        fstype: xfs
+        state: present
+      with_items: "{{ block_devices.stdout_lines }}"
+
+- hosts: glusterfs-admin
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Peer up with other GlusterFS nodes
+      shell: >
+        gluster peer probe {{ hostvars[item].ansible_default_ipv4.address }}
+      with_items: "{{ groups[fs][1:] }}"
+
+    - name: Collect all bricks
+      set_fact:
+        bricks: >
+          {{
+            (bricks|default([]))
+            + ["%s:/brick/%s/%s"|format(hostvars[item.0].ansible_default_ipv4.address,
+                                        item.1,
+                                        options.gfganesha.name)]
+          }}
+      with_nested:
+        - "{{ groups[fs] }}"
+        - "{{ block_devices.stdout_lines }}"
+
+    - name: Create the volume over all the bricks
+      shell: >
+        gluster volume create {{ options.gfganesha.name }}
+        replica {{ options.gfganesha.replication_factor }}
+        transport {{ options.gfganesha.transport_mode }}
+        {{ bricks | join(' ') }} force
+
+    - name: Start the volume
+      shell: >
+        gluster volume start {{ options.gfganesha.name }}
+
+    - name: Disable the default NFS export of the volume
+      shell: >
+        gluster volume set "{{ options.gfganesha.name }}" nfs.disable on
+
+    - name: Populate the NFS Ganesha configurations
+      template:
+        src: ganesha.conf.j2
+        dest: /etc/ganesha/ganesha.conf
+
+    - name: Restart NFS Ganesha
+      systemd:
+        name: nfs-ganesha
+        state: restarted
+
+
+
+
+
+
+
+
+
+
+
+
+
+

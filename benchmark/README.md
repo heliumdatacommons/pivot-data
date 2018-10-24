@@ -72,12 +72,36 @@ performance drop)
 The filesystem solutions to be evaluated are listed as below:
 
 - [x] NFSv4 (baseline)
-- [ ] GlusterFS
+- [x] NFS Ganesha
+- [x] GlusterFS
 - [x] CephFS
 - [x] Ceph RBD + NFSv4
-- [ ] GlusterFS + NFS-Ganesha
+- [x] GlusterFS + NFS Ganesha
 
 In addition, some solutions provide multiple configurations (not for performance tuning) for 
 different use cases, which are likely to impact the performance, *e.g.*, the 
 [GlusterFS volume type](https://docs.gluster.org/en/v3/Administrator%20Guide/Setting%20Up%20Volumes/), 
 distribution of backend Ceph OSDs. 
+
+### Frequent Asked Question
+
+#### 1. Why do you use NFS Ganesha over GlusterFS but not Ceph?
+
+The native GlusterFS client uses FUSE 
+[[reference](https://docs.gluster.org/en/v3/Quick-Start-Guide/Architecture/#fuse)], which incurs 
+overhead for context switches between user/kernel spaces and could bog down the performance. 
+
+The alternative to access GlusterFS is using 
+[libgfapi](https://staged-gluster-docs.readthedocs.io/en/release3.7.0beta1/Features/libgfapi/), 
+which bypasses FUSE and thus saves the context switch overhead. NFS Ganesha is one of the projects 
+that uses the library to access GlusterFS, and presumably able to bring certain performance gain. 
+
+The [FSAL (File System Abstract Layer)](https://github.com/nfs-ganesha/nfs-ganesha/wiki/Fsalsupport) 
+backend of NFS Ganesha for Ceph currently uses `libcephfs` to access CephFS, which is a layer above 
+the `librados` -- the library at the heart of Ceph. Therefore, it is meaningless to run NFS Ganesha
+over CephFS from the standpoint of performance, since it introduces two more layers as compared to 
+mounting CephFS directly. 
+[A user experience](http://lists.ceph.com/pipermail/ceph-users-ceph.com/2017-November/022474.html) 
+reported in the `ceph-user` mailing list proves my intuition to some extent. 
+
+  
