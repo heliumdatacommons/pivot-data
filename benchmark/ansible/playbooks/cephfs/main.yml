@@ -29,13 +29,13 @@
       add_host:
         hostname: "{{ item }}"
         groupname: ceph-mon
-      with_items: "{{ groups[fs][:options.ceph_mon_group_size] }}"
+      with_items: "{{ groups[fs][:options.cephfs.mon_group_size] }}"
 
     - name: Assign host(s) to the CephFS group
       add_host:
         hostname: "{{ item }}"
-        groupname: cephfs
-      with_items: "{{ groups[fs][:options.cephfs_group_size] }}"
+        groupname: ceph-mds
+      with_items: "{{ groups[fs][:options.cephfs.mds_group_size] }}"
 
 - hosts: ceph-mon
   become: true
@@ -49,7 +49,7 @@
     - name: Run Ceph Monitor
       docker_container:
         name: ceph-mon
-        image: "{{ options.ceph_daemon_image }}"
+        image: "{{ options.cephfs.daemon_image }}"
         network_mode: host
         command: mon
         volumes:
@@ -62,21 +62,21 @@
     - name: Run Ceph Manager
       docker_container:
         name: ceph-mgr
-        image: "{{ options.ceph_daemon_image }}"
+        image: "{{ options.cephfs.daemon_image }}"
         network_mode: host
         command: mgr
         volumes:
           - /opt/ceph/etc:/etc/ceph
           - /opt/ceph/var/lib:/var/lib/ceph/
 
-- hosts: ceph
+- hosts: cephfs
   become: true
   tasks:
     - name: Create Ceph configuration file
       template:
         src: ceph.conf.osd.j2
         dest: "{{ item }}"
-        #force: false
+        force: false
       with_items:
         - /opt/ceph/etc/ceph.conf
         - /etc/ceph.conf
@@ -97,7 +97,7 @@
     - name: Zap block devices
       docker_container:
         name: ceph-zap-device
-        image: "{{ options.ceph_daemon_image }}"
+        image: "{{ options.cephfs.daemon_image }}"
         command: zap_device
         privileged: true
         auto_remove: true
@@ -111,7 +111,7 @@
     - name: Run Ceph OSD
       docker_container:
         name: ceph-osd-{{ item }}
-        image: "{{ options.ceph_daemon_image }}"
+        image: "{{ options.cephfs.daemon_image }}"
         network_mode: host
         pid_mode: host
         privileged: true
@@ -124,14 +124,14 @@
           OSD_DEVICE: /dev/{{ item }}
       with_items: "{{ block_devices.stdout_lines }}"
 
-- hosts: cephfs
+- hosts: ceph-mds
   gather_facts: false
   become: true
   tasks:
     - name: Run CephFS
       docker_container:
-        name: cephfs-{{ options.cephfs_name }}
-        image: "{{ options.ceph_daemon_image }}"
+        name: cephfs-{{ options.cephfs.name }}
+        image: "{{ options.cephfs.daemon_image }}"
         network_mode: host
         privileged: true
         command: mds
@@ -140,7 +140,7 @@
           - /opt/ceph/var/lib:/var/lib/ceph/
         env:
           CEPHFS_CREATE: 1
-          CEPHFS_NAME: "{{ options.cephfs_name }}"
+          CEPHFS_NAME: "{{ options.cephfs.name }}"
 
 
 

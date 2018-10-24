@@ -1,0 +1,57 @@
+- hosts: "{{ fs }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Install Ceph
+      apt:
+        name: nfs-kernel-server
+        update_cache: true
+        autoremove: true
+
+    - name: Load Ceph kernel module
+      modprobe:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - nfsd
+        - xfs
+        - nfsv4
+
+    - name: Find attached block devices
+      shell: >
+        lsblk -J | jq '.blockdevices[]
+        | select(.type == "disk")
+        | select(.name != "sda")
+        | .name' | sed 's/"//g'
+      register: block_devices
+
+    - name: Make XFS on the 1st block device
+      filesystem:
+        fstype: xfs
+        dev: /dev/{{ block_devices.stdout_lines[0] }}
+
+    - name: Mount the filesystem to {{ options.nfsv4.mountpoint }}
+      mount:
+        path: "{{ options.nfsv4.mountpoint }}"
+        src: /dev/{{ block_devices.stdout_lines[0] }}
+        fstype: xfs
+        state: present
+
+    - name: Run the NFS server
+      docker_container:
+        name: nfsv4-server
+        image: "{{ options.nfsv4.nfsd_image }}"
+        network_mode: host
+        privileged: true
+        volumes:
+          - "{{ options.nfsv4.mountpoint }}:/data"
+        env:
+          NFS_EXPORT_0: /data  *({{ options.nfsv4.opts }})
+
+
+
+
+
+
+
+

@@ -11,11 +11,15 @@ mode: server
 machine_type: n1-standard-2
 preemptible: false
 options:
-  ceph_daemon_image: ceph/daemon:latest-luminous
-  ceph_mon_group_size: 1
-  cephfs_group_size: 1
-  cephfs_name: alpha
-
+  cephfs:
+    name: alpha
+    daemon_image: ceph/daemon:latest-luminous
+    mon_group_size: 1
+    mds_group_size: 1
+  nfsv4:
+    nfsd_image: heliumdatacommons/nfsd
+    mountpoint: /data
+    opts: rw,async,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
 disks:
   - name: boot
     type: pd-ssd
@@ -24,13 +28,13 @@ disks:
     mode: READ_WRITE
   - name: ext-0
     type: pd-ssd
-    size: 10
+    size: 30
     delete_on_termination: true
     mode: READ_WRITE
 zone:
   - name: us-east1-b
     start: 1
-    end: 4
+    end: 1
 #  - name: us-east4
 #    count: 2
 #  - name: us-central1
