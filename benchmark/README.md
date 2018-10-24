@@ -74,7 +74,7 @@ The filesystem solutions to be evaluated are listed as below:
 - [x] NFSv4 (baseline)
 - [ ] GlusterFS
 - [x] CephFS
-- [ ] Ceph RBD + NFSv4
+- [x] Ceph RBD + NFSv4
 - [ ] GlusterFS + NFS-Ganesha
 
 In addition, some solutions provide multiple configurations (not for performance tuning) for 
