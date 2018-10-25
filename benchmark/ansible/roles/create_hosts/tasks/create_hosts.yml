@@ -6,6 +6,7 @@
     size_gb: "{{ disks.0.size }}"
     image: "{{ image }}"
     mode: "{{ disks.0.mode }}"
+    state: active
   with_sequence: start={{ _zone.start }} end={{ _zone.end }}
   register: _create_boot_disk
   async: 600
@@ -15,7 +16,7 @@
   async_status:
     jid: "{{ item.ansible_job_id }}"
   register: _boot_disk
-  until: _boot_disk
+  until: _boot_disk.finished
   with_items: "{{ _create_boot_disk.results }}"
   delay: 6
   retries: 10
@@ -58,14 +59,13 @@
     - "{{ hosts.results }}"
     - instance_data
 
-- name: Assign hosts to the FS group if in `server` mode
+- name: Assign hosts to the FS group
   add_host:
     hostname: "{{ item.1.public_ip }}"
     groupname: "{{ fs }}"
   with_subelements:
     - "{{ hosts.results }}"
     - instance_data
-  when: mode == 'server'
 
 - include_tasks: create_attached_disks.yml
   with_sequence: start={{ _zone.start }} end={{ _zone.end }}

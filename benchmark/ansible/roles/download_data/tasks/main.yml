@@ -1,0 +1,6 @@
+- name: Fetch measurement files
+  fetch:
+    src: "{{ item }}"
+    dest: ./data
+  with_items:
+    - /data/stats.txt

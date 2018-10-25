@@ -10,10 +10,23 @@
     - name: Install Python
       raw: apt-get update && apt-get install -y python
 
-- hosts: all
+- hosts: server
   gather_facts: false
   become: true
   roles:
-    - install_common_packages
+    - install_docker
+
+- hosts: client
+  gather_facts: false
+  become: true
+  roles:
+    - install_docker
+    - install_client_packages
 
 - import_playbook: playbooks/{{ fs }}/main.yml
+
+- hosts: client
+  gather_facts: false
+  become: true
+  roles:
+    - download_data

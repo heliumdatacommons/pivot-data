@@ -10,6 +10,12 @@ supernet: 10.52.0.0/16
 mode: server
 machine_type: n1-standard-4
 preemptible: false
+client:
+  type: nfs
+  host: 10.52.100.3
+  dir: /
+  opts: vers=4
+  n_parallel: 1
 options:
   cephfs:
     name: alpha
@@ -19,7 +25,7 @@ options:
   nfsv4:
     nfsd_image: heliumdatacommons/nfsd
     mountpoint: /data
-    opts: rw,async,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
+    opts: rw,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
   ganesha:
     mountpoint: /data
   rbd:
@@ -30,7 +36,7 @@ options:
     unwanted_rbd_features: exclusive-lock object-map fast-diff deep-flatten
     nfsd_image: heliumdatacommons/nfsd
     mountpoint: /data
-    opts: rw,async,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
+    opts: rw,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
   glusterfs:
     version: 4.0
     name: alpha
@@ -43,6 +49,9 @@ options:
 #    disperse: 4
     replication_factor: 3
     transport_mode: tcp
+  iozone:
+    docker_image: dchampion24/iozone
+    opts: -Ra -r 4k -g 1g -b /data/output.wks
 
 disks:
   - name: boot

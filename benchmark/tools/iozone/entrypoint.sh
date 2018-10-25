@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-set -e
+set -ex
 
 MOUNTPOINT=${MOUNTPOINT:-/mnt}
+
+mkdir -p ${MOUNTPOINT}
 
 if [ -n "${FS_TYPE}" ];then
   if [ -n "${FS_OPTS}" ]; then
@@ -19,7 +21,7 @@ fi
 
 cd ${MOUNTPOINT}
 
-exec ${@}
+exec "${@}" > /data/stats.txt
 
 if [ -n "${FS_TYPE}" ];then
   umount -f ${MOUNTPOINT} \

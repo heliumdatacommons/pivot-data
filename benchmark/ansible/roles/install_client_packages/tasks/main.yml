@@ -1,0 +1,28 @@
+- name: Add Docker CE repository
+  apt_repository:
+    repo: ppa:gluster/glusterfs-{{ options.glusterfs.version }}
+    state: present
+
+- name: Install other packages
+  apt:
+    name:
+      - docker-ce
+      - nfs-common
+      - ceph-common
+      - glusterfs-client
+    update_cache: true
+
+- name: Load kernel modules
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - nfsv4
+    - ceph
+    - fuse
+
+- name: Create the directory for storing measurement data
+  file:
+    path: /data
+    state: directory
+

@@ -1,6 +1,5 @@
 FROM alpine:latest
 
-
 RUN apk add --no-cache --update --virtual=temporary curl gcc make build-base \
     && apk add --no-cache bash \
     && curl http://www.iozone.org/src/current/iozone3_434.tar > /tmp/iozone.tar \

@@ -1,0 +1,28 @@
+- hosts: "{{ fs }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Run IOZone test
+      docker_container:
+        name: iozone-test-{{ item }}
+        image: "{{ options.iozone.docker_image }}"
+        command: iozone {{ options.iozone.opts }}
+        detach: false
+        network_mode: host
+        privileged: true
+        volumes:
+          - /data:/data
+        env:
+          FS_TYPE: "{{ client.type }}"
+          FS_HOST: "{{ client.host }}"
+          FS_DIR: "{{ client.dir }}"
+          FS_OPTS: "{{ client.opts }}"
+      with_sequence: start=1 end={{ client.n_parallel }}
+
+
+
+
+
+
+
+

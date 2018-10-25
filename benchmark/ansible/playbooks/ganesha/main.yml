@@ -26,6 +26,7 @@
         path: "{{ options.ganesha.mountpoint }}"
         state: directory
         recurse: true
+        mode: 0777
 
     - name: Mount the filesystem to {{ options.ganesha.mountpoint }}
       mount:
