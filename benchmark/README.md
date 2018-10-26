@@ -71,7 +71,8 @@ performance drop)
 
 The filesystem solutions to be evaluated are listed as below:
 
-- [x] NFSv4 (baseline)
+- [ ] Local disk (baseline)
+- [x] NFSv4 
 - [x] NFS Ganesha
 - [x] GlusterFS
 - [x] CephFS

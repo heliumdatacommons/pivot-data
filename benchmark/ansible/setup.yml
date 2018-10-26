@@ -25,6 +25,26 @@
 
 - import_playbook: playbooks/{{ fs }}/main.yml
 
+- hosts: localhost
+  tasks:
+    - name: Generate benchmark ID
+      set_fact:
+        benchmark_id: "{{ ansible_date_time.iso8601_micro | to_uuid }}"
+      when: mode == 'client'
+
+    - name: Create data directory for the benchmark
+      file:
+        path: data/{{ benchmark_id }}
+        state: directory
+        recurse: true
+      when: mode == 'client'
+
+    - name: Copy the configuration file
+      copy:
+        src: group_vars/all.yml
+        dest: data/{{ benchmark_id }}/config.yml
+      when: mode == 'client'
+
 - hosts: client
   gather_facts: false
   become: true

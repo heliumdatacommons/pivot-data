@@ -1,0 +1,22 @@
+FROM ubuntu:bionic
+
+RUN apt-get update \
+    && apt-get install -y python3 curl make gcc build-essential \
+    && curl http://www.iozone.org/src/current/iozone3_434.tar > /tmp/iozone.tar \
+    && cd /tmp \
+    && tar -xf /tmp/iozone.tar \
+    && cd /tmp/iozone*/src/current \
+    && make linux \
+    && cp iozone /usr/bin/iozone \
+    && rm -rf /tmp/iozone* \
+    && apt-get purge -y make gcc build-essential curl \
+    && apt-get autoremove -y \
+    && apt-get autoclean
+
+ADD entrypoint.sh /bin/entrypoint.sh
+ADD parse_output.py /bin/parse_output.py
+
+RUN chmod +x /bin/entrypoint.sh \
+    && chmod +x /bin/parse_output.py
+
+ENTRYPOINT ["/bin/entrypoint.sh"]

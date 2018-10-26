@@ -9,10 +9,12 @@
         command: iozone {{ options.iozone.opts }}
         detach: false
         network_mode: host
+#        auto_remove: true
         privileged: true
         pull: true
         volumes:
           - /data:/data
+          - /dev/fuse:/dev/fuse
         env:
           FS_TYPE: "{{ client.type }}"
           FS_HOST: "{{ client.host }}"
@@ -25,13 +27,13 @@
       async: 3600
       poll: 0
 
-
     - name: Wait for IOZone run(s) to finish
       async_status:
         jid: "{{ item.ansible_job_id }}"
       register: _iozone
       until: _iozone.finished
       with_items: "{{ _run_iozone.results }}"
+      ignore_errors: true
       delay: 10
       retries: 360
 

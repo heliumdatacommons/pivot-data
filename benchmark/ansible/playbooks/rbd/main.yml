@@ -158,7 +158,7 @@
     - name: Create RBD
       shell: >
         rbd create {{ options.rbd.name }}
-        --size {{ (groups.rbd | length) * (disks[1:] | sum(attribute='size')) * 1024 }}
+        --size {{ (groups.rbd | length) * (disks[1:] | sum(attribute='size') - 5) * 1024 }}
 
     - name: Disable unwanted RBD features
       shell: >

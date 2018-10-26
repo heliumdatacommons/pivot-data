@@ -1,6 +1,12 @@
 - name: Fetch measurement files
   fetch:
-    src: "/data/stats-{{ inventory_hostname }}-{{ item }}.txt"
-    dest: ./data/{{ hostvars.localhost.benchmark_id }}
+    src: "/data/stats-{{ inventory_hostname }}-{{ item }}.json"
+    dest: ./data/{{ hostvars.localhost.benchmark_id }}/
     flat: true
+  with_sequence: start=1 end={{ client.n_parallel }}
+
+- name: Clean up the data directory
+  file:
+    path: "/data/stats-{{ inventory_hostname }}-{{ item }}.json"
+    state: absent
   with_sequence: start=1 end={{ client.n_parallel }}

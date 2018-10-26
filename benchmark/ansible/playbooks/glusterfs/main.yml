@@ -46,7 +46,7 @@
 
     - name: Mount the block devices
       mount:
-        path: /brick/{{ item }}"
+        path: /brick/{{ item }}
         src: /dev/{{ item }}
         fstype: xfs
         state: mounted

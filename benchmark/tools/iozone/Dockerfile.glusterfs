@@ -1,0 +1,12 @@
+FROM dchampion24/iozone:latest
+
+ARG GLUSTERFS_VERSION=4.0
+
+RUN apt-get update \
+    && apt-get install -y software-properties-common \
+    && add-apt-repository ppa:gluster/glusterfs-${GLUSTERFS_VERSION} \
+    && apt-get update \
+    && apt-get purge -y software-properties-common \
+    && apt-get install -y glusterfs-client \
+    && apt-get autoremove -y \
+    && apt-get autoclean

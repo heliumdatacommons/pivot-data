@@ -1,0 +1,6 @@
+FROM dchampion24/iozone:latest
+
+RUN apt-get update \
+    && apt-get install -y nfs-common \
+    && apt-get autoremove -y \
+    && apt-get autoclean
