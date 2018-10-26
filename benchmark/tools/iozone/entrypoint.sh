@@ -19,9 +19,10 @@ if [ -n "${FS_TYPE}" ];then
   fi
 fi
 
-cd ${MOUNTPOINT}
+mkdir -p ${MOUNTPOINT}/${SUB_DIR}
+cd ${MOUNTPOINT}/${SUB_DIR}
 
-exec "${@}" > /data/stats.txt
+exec "${@}" > /data/stats-${CLIENT_ID}.txt
 
 if [ -n "${FS_TYPE}" ];then
   umount -f ${MOUNTPOINT} \

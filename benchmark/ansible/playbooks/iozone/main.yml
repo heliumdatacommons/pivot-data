@@ -10,6 +10,7 @@
         detach: false
         network_mode: host
         privileged: true
+        pull: true
         volumes:
           - /data:/data
         env:
@@ -17,7 +18,23 @@
           FS_HOST: "{{ client.host }}"
           FS_DIR: "{{ client.dir }}"
           FS_OPTS: "{{ client.opts }}"
+          CLIENT_ID: "{{ inventory_hostname }}-{{ item }}"
+          SUB_DIR: "{{ inventory_hostname }}.{{ item }}"
       with_sequence: start=1 end={{ client.n_parallel }}
+      register: _run_iozone
+      async: 3600
+      poll: 0
+
+
+    - name: Wait for IOZone run(s) to finish
+      async_status:
+        jid: "{{ item.ansible_job_id }}"
+      register: _iozone
+      until: _iozone.finished
+      with_items: "{{ _run_iozone.results }}"
+      delay: 10
+      retries: 360
+
 
 
 

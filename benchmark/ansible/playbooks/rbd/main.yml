@@ -179,7 +179,7 @@
         path: "{{ options.rbd.mountpoint }}"
         src: "{{ rbd_map_out.stdout_lines[0] }}"
         fstype: xfs
-        state: present
+        state: mounted
 
     - name: Run the NFS server
       docker_container:

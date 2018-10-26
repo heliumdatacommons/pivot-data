@@ -12,10 +12,10 @@ machine_type: n1-standard-4
 preemptible: false
 client:
   type: nfs
-  host: 10.52.100.3
+  host: 10.52.100.7
   dir: /
   opts: vers=4
-  n_parallel: 1
+  n_parallel: 2
 options:
   cephfs:
     name: alpha
@@ -51,7 +51,7 @@ options:
     transport_mode: tcp
   iozone:
     docker_image: dchampion24/iozone
-    opts: -Ra -r 4k -g 1g -b /data/output.wks
+    opts: -Ra -r 4k -g 1g
 
 disks:
   - name: boot
@@ -64,10 +64,15 @@ disks:
     size: 30
     delete_on_termination: true
     mode: READ_WRITE
+  - name: ext-1
+    type: pd-ssd
+    size: 30
+    delete_on_termination: true
+    mode: READ_WRITE
 zone:
   - name: us-east1-b
     start: 1
-    end: 1
+    end: 3
 #  - name: us-east4
 #    count: 2
 #  - name: us-central1

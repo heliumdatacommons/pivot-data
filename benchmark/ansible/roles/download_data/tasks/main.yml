@@ -1,6 +1,6 @@
 - name: Fetch measurement files
   fetch:
-    src: "{{ item }}"
-    dest: ./data
-  with_items:
-    - /data/stats.txt
+    src: "/data/stats-{{ inventory_hostname }}-{{ item }}.txt"
+    dest: ./data/{{ hostvars.localhost.benchmark_id }}
+    flat: true
+  with_sequence: start=1 end={{ client.n_parallel }}

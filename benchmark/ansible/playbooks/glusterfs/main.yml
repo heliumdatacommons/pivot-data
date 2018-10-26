@@ -49,7 +49,7 @@
         path: /brick/{{ item }}"
         src: /dev/{{ item }}
         fstype: xfs
-        state: present
+        state: mounted
       with_items: "{{ block_devices.stdout_lines }}"
 
 - hosts: glusterfs-admin

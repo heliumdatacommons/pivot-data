@@ -33,7 +33,7 @@
         path: "{{ options.ganesha.mountpoint }}"
         src: /dev/{{ block_devices.stdout_lines[0] }}
         fstype: xfs
-        state: present
+        state: mounted
 
     - name: Populate the NFS Ganesha configuration
       template:

@@ -1,4 +1,4 @@
-- name: Add Docker CE repository
+- name: Add GlusterFS repository
   apt_repository:
     repo: ppa:gluster/glusterfs-{{ options.glusterfs.version }}
     state: present
