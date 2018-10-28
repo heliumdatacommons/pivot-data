@@ -8,9 +8,9 @@ mkdir -p ${MOUNTPOINT}
 
 if [ -n "${FS_TYPE}" ];then
   if [ -n "${FS_OPTS}" ]; then
-    mount -v -t ${FS_TYPE} ${FS_HOST}:${FS_DIR} ${MOUNTPOINT} -o ${FS_OPTS}
+    mount -t ${FS_TYPE} ${FS_HOST}:${FS_DIR} ${MOUNTPOINT} -o ${FS_OPTS}
   else
-    mount -v -t ${FS_TYPE} ${FS_HOST}:${FS_DIR} ${MOUNTPOINT}
+    mount -t ${FS_TYPE} ${FS_HOST}:${FS_DIR} ${MOUNTPOINT}
   fi
   if [ "$?" = "0" ];then
     echo "Mounted ${FS_HOST}:${FS_DIR} to ${MOUNTPOINT} successfully"

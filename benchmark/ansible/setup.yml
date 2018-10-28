@@ -9,6 +9,7 @@
   tasks:
     - name: Install Python
       raw: apt-get update && apt-get install -y python
+      retries: 3
 
 - hosts: server
   gather_facts: false
