@@ -71,13 +71,13 @@ performance drop)
 
 The filesystem solutions to be evaluated are listed as below:
 
-- [ ] Local disk (baseline)
 - [x] NFSv4 
 - [x] NFS Ganesha
 - [x] GlusterFS
 - [x] CephFS
 - [x] Ceph RBD + NFSv4
 - [x] GlusterFS + NFS Ganesha
+- [x] Ceph RBD + NFS Ganesha
 
 In addition, some solutions provide multiple configurations (not for performance tuning) for 
 different use cases, which are likely to impact the performance, *e.g.*, the 

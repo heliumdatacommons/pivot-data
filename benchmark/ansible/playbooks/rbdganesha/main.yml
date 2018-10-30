@@ -1,0 +1,177 @@
+- hosts: "{{ fs }}"
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Install Ceph
+      apt:
+        name: ceph-base
+        update_cache: true
+        autoremove: true
+
+    - name: Load Ceph kernel module
+      modprobe:
+        name: ceph
+        state: present
+
+    - name: Create required directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        recurse: true
+      with_items:
+      - /opt/ceph/etc
+      - /opt/ceph/var/lib/bootstrap-osd
+
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Assign host(s) to the Ceph monitor group
+      add_host:
+        hostname: "{{ item }}"
+        groupname: ceph-mon
+      with_items: "{{ groups[fs][:options.rbdganesha.mon_group_size] }}"
+
+- hosts: ceph-mon
+  become: true
+  tasks:
+    - name: Create Ceph configuration file
+      template:
+        src: ceph.conf.mon.j2
+        dest: /opt/ceph/etc/ceph.conf
+      become: true
+
+    - name: Run Ceph Monitor
+      docker_container:
+        name: ceph-mon
+        image: "{{ options.rbdganesha.daemon_image }}"
+        network_mode: host
+        command: mon
+        volumes:
+          - /opt/ceph/etc:/etc/ceph
+          - /opt/ceph/var/lib:/var/lib/ceph/
+        env:
+          MON_IP: "{{ ansible_default_ipv4.address }}"
+          CEPH_PUBLIC_NETWORK: "{{ supernet }}"
+
+    - name: Run Ceph Manager
+      docker_container:
+        name: ceph-mgr
+        image: "{{ options.rbdganesha.daemon_image }}"
+        network_mode: host
+        command: mgr
+        volumes:
+          - /opt/ceph/etc:/etc/ceph
+          - /opt/ceph/var/lib:/var/lib/ceph/
+
+
+- hosts: rbdganesha
+  become: true
+  tasks:
+    - name: Create Ceph configuration file
+      template:
+        src: ceph.conf.osd.j2
+        dest: "{{ item }}"
+        force: false
+      with_items:
+        - /opt/ceph/etc/ceph.conf
+        - /etc/ceph/ceph.conf
+
+    - name: Create an empty keyring file as placeholder
+      file:
+        path: /opt/ceph/var/lib/bootstrap-osd/ceph.keyring
+        state: touch
+
+    - name: Find attached block devices
+      shell: >
+        lsblk -J | jq '.blockdevices[]
+        | select(.type == "disk")
+        | select(.name != "sda")
+        | .name' | sed 's/"//g'
+      register: block_devices
+
+    - name: Zap block devices
+      docker_container:
+        name: ceph-zap-device
+        image: "{{ options.rbdganesha.daemon_image }}"
+        command: zap_device
+        privileged: true
+        auto_remove: true
+        volumes:
+          - /dev:/dev
+        env:
+          OSD_DEVICE: /dev/{{ item }}
+      with_items: "{{ block_devices.stdout_lines }}"
+      ignore_errors: true
+
+    - name: Run Ceph OSD
+      docker_container:
+        name: ceph-osd-{{ item }}
+        image: "{{ options.rbdganesha.daemon_image }}"
+        network_mode: host
+        pid_mode: host
+        privileged: true
+        command: osd
+        volumes:
+          - /opt/ceph/etc:/etc/ceph
+          - /opt/ceph/var/lib:/var/lib/ceph/
+          - /dev:/dev
+        env:
+          OSD_DEVICE: /dev/{{ item }}
+      with_items: "{{ block_devices.stdout_lines }}"
+
+- hosts: ceph-mon
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Load Ceph kernel module
+      modprobe:
+        name: "{{ item }}"
+        state: present
+      with_items:
+      - xfs
+      - nfsv4
+      - rbd
+
+    - name: Create RBD data pool
+      shell: >
+        ceph osd pool create rbd {{ options.rbdganesha.num_pgs }}
+
+    - name: Initialize RBD data pool
+      shell: >
+        rbd pool init rbd
+
+    - name: Create RBD
+      shell: >
+        rbd create {{ options.rbdganesha.name }}
+        --size {{ (groups.rbdganesha | length) * (disks[1:] | sum(attribute='size') - 5) * 1024 }}
+
+    - name: Disable unwanted RBD features
+      shell: >
+        rbd feature disable {{ options.rbdganesha.name }} {{ options.rbdganesha.unwanted_rbd_features }}
+
+    - name: Map the RBD as a local block device
+      shell: >
+        rbd map {{ options.rbdganesha.name }}
+      register: rbd_map_out
+
+    - name: Make XFS on the RBD
+      filesystem:
+        fstype: xfs
+        dev: "{{ rbd_map_out.stdout_lines[0] }}"
+
+    - name: Mount the filesystem to {{ options.rbdganesha.mountpoint }}
+      mount:
+        path: "{{ options.rbdganesha.mountpoint }}"
+        src: "{{ rbd_map_out.stdout_lines[0] }}"
+        fstype: xfs
+        state: mounted
+
+    - name: Run NFS Ganesha
+      docker_container:
+        name: nfs-ganesha
+        image: "{{ options.rbdganesha.ganesha_image }}"
+        network_mode: host
+        privileged: true
+        pull: true
+        volumes:
+          - "{{ options.rbdganesha.mountpoint }}:/data/nfs"

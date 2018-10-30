@@ -2,12 +2,6 @@
   gather_facts: false
   become: true
   tasks:
-    - name: Install NFS Ganesha for VFS
-      apt:
-        name:
-        - nfs-ganesha-vfs
-        update_cache: true
-
     - name: Find attached block devices
       shell: >
         lsblk -J | jq '.blockdevices[]
@@ -35,21 +29,12 @@
         fstype: xfs
         state: mounted
 
-    - name: Populate the NFS Ganesha configuration
-      template:
-        src: ganesha.conf.j2
-        dest: /etc/ganesha/ganesha.conf
-
-    - name: Restart NFS Ganesha
-      systemd:
+    - name: Run NFS Ganesha
+      docker_container:
         name: nfs-ganesha
-        state: restarted
-
-
-
-
-
-
-
-
-
+        image: "{{ options.ganesha.docker_image }}"
+        network_mode: host
+        privileged: true
+        pull: true
+        volumes:
+          - "{{ options.ganesha.mountpoint }}:/data/nfs"
