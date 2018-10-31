@@ -8,15 +8,32 @@ mkdir -p ${MOUNTPOINT}
 
 if [ -n "${FS_TYPE}" ];then
   if [ -n "${FS_OPTS}" ]; then
-    mount -t ${FS_TYPE} ${FS_HOST}:${FS_DIR} ${MOUNTPOINT} -o ${FS_OPTS}
+    for attempt in $(seq 3); do
+      mount -t ${FS_TYPE} ${FS_HOST}:${FS_DIR} ${MOUNTPOINT} -o ${FS_OPTS}
+      if [ "$?" = "0" ]; then
+        echo "Mounted ${FS_HOST}:${FS_DIR} to ${MOUNTPOINT} successfully"
+        break
+      elif [ ${attempt} = "3" ];then
+        echo "Failed to mount ${FS_HOST}:${FS_DIR} to ${MOUNTPOINT}"
+        exit 1
+      else
+        echo "Attempt ${attempt}"
+      fi
+    done
   else
-    mount -t ${FS_TYPE} ${FS_HOST}:${FS_DIR} ${MOUNTPOINT}
-  fi
-  if [ "$?" = "0" ];then
-    echo "Mounted ${FS_HOST}:${FS_DIR} to ${MOUNTPOINT} successfully"
-  else
-    echo "Failed to mount ${FS_HOST}:${FS_DIR} to ${MOUNTPOINT}"
-    exit 1
+    for attempt in $(seq 3); do
+      mount -t ${FS_TYPE} ${FS_HOST}:${FS_DIR} ${MOUNTPOINT}
+      if [ "$?" = "0" ]; then
+         echo "Mounted ${FS_HOST}:${FS_DIR} to ${MOUNTPOINT} successfully"
+         break
+      elif [ ${attempt} = "3" ];then
+          echo "Failed to mount ${FS_HOST}:${FS_DIR} to ${MOUNTPOINT}"
+          exit 1
+      else
+        echo "Attempt ${attempt}"
+      fi
+    done
+
   fi
 fi
 
@@ -25,8 +42,15 @@ cd ${MOUNTPOINT}/${SUB_DIR}
 
 exec "${@}" | parse_output.py
 
-if [ -n "${FS_TYPE}" ];then
+
+function umount_fs() {
   umount -f ${MOUNTPOINT} \
-      && echo "${MOUNTPOINT} is umounted successfully" \
-      || echo "Failed to unmount ${MOUNTPOINT}"
+  && echo "${MOUNTPOINT} is umounted successfully" \
+  || echo "Failed to unmount ${MOUNTPOINT}"
+}
+
+
+if [ -n "${FS_TYPE}" ];then
+  umount_fs
+  umount_fs
 fi

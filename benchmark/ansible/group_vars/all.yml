@@ -1,80 +1,75 @@
-ansible_ssh_user: centos
-ansible_ssh_public_key_file: ~/.ssh/id_rsa.pub
 ansible_ssh_private_key_file: ~/.ssh/id_rsa
-
-project: helium-dc
-image: ubuntu-1804
-max_retries: 5
-supernet: 10.52.0.0/16
-
-mode: server
-machine_type: n1-standard-4
-preemptible: false
+ansible_ssh_public_key_file: ~/.ssh/id_rsa.pub
+ansible_ssh_user: centos
 client:
-  type: nfs
+  dir: /
   host: 10.52.100.3
-  dir: /data
-  opts: vers=4
-  n_parallel: 1
+  n_parallel: 4
+  opts: mds_namespace=alpha
+  type: ceph
+disks:
+- delete_on_termination: true
+  mode: READ_WRITE
+  name: boot
+  size: 30
+  type: pd-ssd
+- delete_on_termination: true
+  mode: READ_WRITE
+  name: ext-0
+  size: 100
+  type: pd-ssd
+image: ubuntu-1804
+machine_type: n1-standard-16
+max_retries: 5
+mode: server
 options:
   cephfs:
-    name: alpha
     daemon_image: ceph/daemon:latest-luminous
-    mon_group_size: 1
     mds_group_size: 1
-  nfsv4:
-    nfsd_image: heliumdatacommons/nfsd
-    mountpoint: /data
-    opts: rw,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
-  ganesha:
-    mountpoint: /data
-  rbd:
-    name: alpha
     mon_group_size: 1
-    daemon_image: ceph/daemon:latest-luminous
-    num_pgs: 8
-    unwanted_rbd_features: exclusive-lock object-map fast-diff deep-flatten
-    nfsd_image: heliumdatacommons/nfsd
+    name: alpha
+  ganesha:
+    docker_image: janeczku/nfs-ganesha
     mountpoint: /data
-    opts: rw,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
-  glusterfs:
-    version: 4.0
-    name: alpha
-#    disperse: 4
-    replication_factor: 3
-    transport_mode: tcp
   gfganesha:
-    version: 4.0
     name: alpha
-#    disperse: 4
     replication_factor: 3
     transport_mode: tcp
+    version: 4.0
+  glusterfs:
+    name: alpha
+    replication_factor: 3
+    transport_mode: tcp
+    version: 4.0
   iozone:
     docker_image: dchampion24/iozone:nfs
-    opts: -Ra -r 4k -g 1g
-
-disks:
-  - name: boot
-    type: pd-ssd
-    size: 30
-    delete_on_termination: true
-    mode: READ_WRITE
-  - name: ext-0
-    type: pd-ssd
-    size: 100
-    delete_on_termination: true
-    mode: READ_WRITE
+    opts: -Rac -r 4k -s 32m
+  nfsv4:
+    mountpoint: /data
+    nfsd_image: heliumdatacommons/nfsd
+    opts: rw,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
+  rbd:
+    daemon_image: ceph/daemon:latest-luminous
+    mon_group_size: 1
+    mountpoint: /data
+    name: alpha
+    nfsd_image: heliumdatacommons/nfsd
+    num_pgs: 8
+    opts: rw,fsid=0,insecure,no_subtree_check,anonuid=1000,anongid=1000,no_root_squash
+    unwanted_rbd_features: exclusive-lock object-map fast-diff deep-flatten
+  rbdganesha:
+    daemon_image: ceph/daemon:latest-luminous
+    ganesha_image: janeczku/nfs-ganesha
+    mon_group_size: 1
+    mountpoint: /data
+    name: alpha
+    num_pgs: 8
+    unwanted_rbd_features: exclusive-lock object-map fast-diff deep-flatten
+preemptible: false
+project: helium-dc
+running: true
+supernet: 10.52.0.0/16
 zone:
-  - name: us-east1-b
-    start: 1
-    end: 1
-#  - name: us-east4
-#    count: 2
-#  - name: us-central1
-#    count: 3
-#  - name: us-west1
-#    count: 4
-#  - name: northamerica-northeast1
-#    count: 5
-
-
+- name: us-east1-b
+  start: 1
+  end: 1

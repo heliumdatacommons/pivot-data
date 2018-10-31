@@ -9,6 +9,9 @@
   tasks:
     - name: Install Python
       raw: apt-get update && apt-get install -y python
+      when: not running
+      register: _install_python
+      until: not _install_python.failed
       retries: 3
 
 - hosts: server

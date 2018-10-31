@@ -7,6 +7,7 @@
     image: "{{ image }}"
     mode: "{{ disks.0.mode }}"
     state: active
+  when: not running
   with_sequence: start={{ _zone.start }} end={{ _zone.end }}
   register: _create_boot_disk
   async: 600
@@ -15,6 +16,7 @@
 - name: Wait for boot disk creation to finish
   async_status:
     jid: "{{ item.ansible_job_id }}"
+  when: not running
   register: _boot_disk
   until: _boot_disk.finished
   with_items: "{{ _create_boot_disk.results }}"
@@ -28,7 +30,7 @@
     machine_type: "{{ machine_type }}"
     network: "{{ project }}-vpc-{{ _zone.name.split('-')[:2] | join('-') }}"
     subnetwork: "{{ project }}-subnet-{{ _zone.name.split('-')[:2] | join('-') }}"
-    state: present
+    state: active
     preemptible: "{{ preemptible }}"
     metadata:
       block-project-ssh-keys: true
@@ -49,7 +51,7 @@
   until: hosts.finished
   with_items: "{{ _created_instances.results }}"
   delay: 6
-  retries: 10
+  retries: 100
 
 - name: Assign hosts to the server/client group
   add_host:
@@ -69,5 +71,6 @@
 
 - include_tasks: create_attached_disks.yml
   with_sequence: start={{ _zone.start }} end={{ _zone.end }}
+  when: not running
   loop_control:
     loop_var: _seq

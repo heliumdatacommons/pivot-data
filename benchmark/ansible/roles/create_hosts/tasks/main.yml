@@ -19,6 +19,7 @@
     delay: 5
     timeout: 300
   with_items: "{{ groups[mode] }}"
+  when: not running
   register: _check_ssh
   async: 300
   poll: 0
@@ -28,6 +29,7 @@
     jid: "{{ item.ansible_job_id }}"
   register: _job
   with_items: "{{ _check_ssh.results }}"
+  when: not running
   until: _job.finished
   delay: 5
   retries: 10

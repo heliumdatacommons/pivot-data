@@ -7,24 +7,24 @@ import numpy as np
 
 from subprocess import Popen, PIPE, STDOUT
 
-exp_id = '8362791176069c95cff2d575b7a5f58ec7fc3ed4'
-# exp_id = 'd0e4c0aef2b9b26921b075fa32e445526c909f51'
-n_repeat = 15
+exp_id = 'ff95ca6b7c3c0b37ffca953f541eaa3d9e6d749a'
+n_repeat = 5
 
 clients = {
-  'rbd': dict(host='10.52.100.16', type='nfs', dir='/', opts='vers=4'),
-  'cephfs': dict(host='10.52.100.12', type='ceph', dir='/', opts='mds_namespace=alpha'),
-  'nfsv4': dict(host='10.52.100.22', type='nfs', dir='/', opts='vers=4'),
-  'ganesha': dict(host='10.52.100.23', type='nfs', dir='/', opts='vers=4'),
-  'gfganesha': dict(host='10.52.100.19', type='nfs', dir='/data', opts='vers=4'),
-  'rbdganesha': dict(host='10.52.100.3', type='nfs', dir='/', opts='vers=4'),
+  # 'rbd': dict(host='10.52.100.16', type='nfs', dir='/', opts='vers=4'),
+  'cephfs': dict(host='10.52.100.3', type='ceph', dir='/', opts='mds_namespace=alpha'),
+  # 'nfsv4': dict(host='10.52.100.22', type='nfs', dir='/', opts='vers=4'),
+  # 'ganesha': dict(host='10.52.100.23', type='nfs', dir='/', opts='vers=4'),
+  'gfganesha': dict(host='10.52.100.11', type='nfs', dir='/data', opts='vers=4'),
+  'rbdganesha': dict(host='10.52.100.8', type='nfs', dir='/', opts='vers=4'),
 }
 
 
-def update_config(host, type, dir, opts):
+def update_client_config(host, type, dir, opts, zone=[], n_parallel=1):
   fn = 'group_vars/all.yml'
   cfg = yaml.load(open(fn))
-  cfg['client'].update(host=host, type=type, dir=dir, opts=opts)
+  cfg['client'].update(host=host, type=type, dir=dir, opts=opts, n_parallel=n_parallel)
+  cfg['zone'] = list(zone)
   yaml.dump(cfg, open(fn, 'w'),
             default_flow_style=False,
             allow_unicode=True,
@@ -63,15 +63,39 @@ def collect_output(name):
   shutil.move('%s/%s'%(base_dir, output_dir[0]), '%s/%s/%s'%(base_dir, exp_id, name))
 
 
-if __name__ == '__main__':
+def test_fs():
   try:
     for _ in range(n_repeat):
       clis = shuffle_clients()
       while clis:
         name, params = clis.pop()
         print('Testing %s ...'%name)
-        update_config(**params)
+        update_client_config(**params)
         run_experiment()
         collect_output(name)
   except KeyboardInterrupt:
     sys.stdout.write('Stopped\n')
+
+
+def test_scalability():
+  zone = [
+    dict(name='us-east1-b', start=1, end=1)
+  ]
+  try:
+    n_parallel = 1
+    while n_parallel <= 16:
+      for _ in range(n_repeat):
+        clis = shuffle_clients()
+        while clis:
+          name, params = clis.pop()
+          print('Testing %s ...'%name)
+          update_client_config(n_parallel=n_parallel, zone=zone, **params)
+          run_experiment()
+          collect_output(name)
+      n_parallel *= 2
+  except KeyboardInterrupt:
+    sys.stdout.write('Stopped\n')
+
+
+if __name__ == '__main__':
+  test_scalability()

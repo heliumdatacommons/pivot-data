@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import time
 
 
 field_names = ('file_size', 'reclen', 'write', 'rewrite', 'read', 'reread', 'random_read',
@@ -24,24 +25,23 @@ def parse_line(l):
 
 def filter_input():
   start = False
+  output = []
   for l in read_stdin():
     if 'reclen' in l:
       start = True
       continue
     if not start: continue
     if len(l.split()) < 14: break
-    write(parse_line(l))
+    output += [parse_line(l)]
+  return output
 
 
-def write(l):
+def write(output):
   fn = '/data/stats-%s.json'%os.environ['CLIENT_ID']
-  try:
-    output = json.load(open(fn))
-  except:
-    output = []
-  output.append(l)
-  json.dump(output, open(fn, 'w+'), indent=2)
+  with open(fn, 'w') as f:
+    json.dump(output, f, indent=2)
 
 
 if __name__ == '__main__':
-  filter_input()
+  write(filter_input())
+

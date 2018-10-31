@@ -4,6 +4,7 @@
     dest: ./data/{{ hostvars.localhost.benchmark_id }}/
     flat: true
   with_sequence: start=1 end={{ client.n_parallel }}
+  ignore_errors: true
 
 - name: Clean up the data directory
   file:
