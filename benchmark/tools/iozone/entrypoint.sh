@@ -4,7 +4,7 @@ set -ex
 
 MOUNTPOINT=${MOUNTPOINT:-/mnt}
 
-mkdir -p ${MOUNTPOINT}
+mkdir -p ${MOUNTPOINT} || echo 0
 
 if [ -n "${FS_TYPE}" ];then
   if [ -n "${FS_OPTS}" ]; then
@@ -37,7 +37,7 @@ if [ -n "${FS_TYPE}" ];then
   fi
 fi
 
-mkdir -p ${MOUNTPOINT}/${SUB_DIR}
+rm -rf ${MOUNTPOINT}/${SUB_DIR} && mkdir -p ${MOUNTPOINT}/${SUB_DIR}
 cd ${MOUNTPOINT}/${SUB_DIR}
 
 exec "${@}" | parse_output.py

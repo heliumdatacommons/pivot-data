@@ -13,10 +13,8 @@
 
 - name: Install required Python dependencies
   pip:
-    name: "{{ item }}"
+    name: docker
     state: latest
-  with_items:
-    - docker
   when: not running
 
 - name: Add Docker CE official GPG key

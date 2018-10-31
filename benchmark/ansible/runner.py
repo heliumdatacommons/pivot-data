@@ -40,11 +40,19 @@ def shuffle_clients():
 def run_experiment():
   p = Popen(shlex.split('ansible-playbook setup.yml --extra-vars "fs=iozone mode=client"'),
             stdout=PIPE)
+  start = False
   try:
     while True:
-      l = p.stdout.readline()
-      sys.stdout.write(l.decode('utf-8'))
+      l = str(p.stdout.readline(), 'utf-8')
+      if 'RETRYING' in l: continue
+      if 'Run IOZone test' in l:
+        start = True
+      if 'localhost' in l:
+        start = False
+      if start:
+        sys.stdout.write(l)
       if not l and p.poll() is not None:
+        start = False
         break
   except KeyboardInterrupt as e:
     p.kill()
