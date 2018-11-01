@@ -3,10 +3,10 @@ ansible_ssh_public_key_file: ~/.ssh/id_rsa.pub
 ansible_ssh_user: centos
 client:
   dir: /
-  host: 10.52.100.3
-  n_parallel: 4
-  opts: mds_namespace=alpha
-  type: ceph
+  host: 10.52.100.9
+  n_parallel: 1
+  opts: vers=4
+  type: nfs
 disks:
 - delete_on_termination: true
   mode: READ_WRITE
@@ -43,7 +43,7 @@ options:
     version: 4.0
   iozone:
     docker_image: dchampion24/iozone:nfs
-    opts: -Rac -r 4k -s 32m
+    opts: -Rac -r 4k -s 512m
   nfsv4:
     mountpoint: /data
     nfsd_image: heliumdatacommons/nfsd
@@ -70,6 +70,6 @@ project: helium-dc
 running: true
 supernet: 10.52.0.0/16
 zone:
-- name: us-east1-b
+- end: 1
+  name: us-east1-b
   start: 1
-  end: 1

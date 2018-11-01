@@ -51,6 +51,7 @@
         image: "{{ options.nfsv4.nfsd_image }}"
         network_mode: host
         privileged: true
+        restart_policy: always
         volumes:
           - "{{ options.nfsv4.mountpoint }}:/data"
         env:

@@ -12,11 +12,11 @@ n_repeat = 5
 
 clients = {
   # 'rbd': dict(host='10.52.100.16', type='nfs', dir='/', opts='vers=4'),
-  'cephfs': dict(host='10.52.100.3', type='ceph', dir='/', opts='mds_namespace=alpha'),
+  'cephfs': dict(host='10.52.100.11', type='ceph', dir='/', opts='mds_namespace=alpha'),
   # 'nfsv4': dict(host='10.52.100.22', type='nfs', dir='/', opts='vers=4'),
   # 'ganesha': dict(host='10.52.100.23', type='nfs', dir='/', opts='vers=4'),
-  'gfganesha': dict(host='10.52.100.11', type='nfs', dir='/data', opts='vers=4'),
-  'rbdganesha': dict(host='10.52.100.8', type='nfs', dir='/', opts='vers=4'),
+  'gfganesha': dict(host='10.52.100.3', type='nfs', dir='/data', opts='vers=4'),
+  'rbdganesha': dict(host='10.52.100.9', type='nfs', dir='/', opts='vers=4'),
 }
 
 
@@ -51,8 +51,8 @@ def run_experiment():
         start = False
       if start:
         sys.stdout.write(l)
+        sys.stdout.flush()
       if not l and p.poll() is not None:
-        start = False
         break
   except KeyboardInterrupt as e:
     p.kill()
@@ -65,6 +65,7 @@ def collect_output(name):
   output_dir = [d for d in os.listdir(base_dir) if len(d) == 36]
   if len(output_dir) == 0:
     sys.stderr.write('Output directory for %s is not found'%name)
+    sys.stderr.flush()
     sys.exit(1)
   os.makedirs('%s/%s/%s'%(base_dir, exp_id, name), exist_ok=True)
   print('Move %s/%s to %s/%s/%s'%(base_dir, output_dir[0], base_dir, exp_id, name))
@@ -90,9 +91,10 @@ def test_scalability():
     dict(name='us-east1-b', start=1, end=1)
   ]
   try:
-    n_parallel = 1
-    while n_parallel <= 16:
-      for _ in range(n_repeat):
+    for i in range(n_repeat):
+      n_parallel = 1
+      while n_parallel <= 16:
+        print('Parallel #: %d, repeat #: %d'%(n_parallel, i))
         clis = shuffle_clients()
         while clis:
           name, params = clis.pop()
@@ -100,7 +102,7 @@ def test_scalability():
           update_client_config(n_parallel=n_parallel, zone=zone, **params)
           run_experiment()
           collect_output(name)
-      n_parallel *= 2
+        n_parallel *= 2
   except KeyboardInterrupt:
     sys.stdout.write('Stopped\n')
 

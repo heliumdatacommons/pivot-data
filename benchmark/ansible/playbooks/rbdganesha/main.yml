@@ -45,6 +45,7 @@
         name: ceph-mon
         image: "{{ options.rbdganesha.daemon_image }}"
         network_mode: host
+        restart_policy: always
         command: mon
         volumes:
           - /opt/ceph/etc:/etc/ceph
@@ -56,6 +57,7 @@
     - name: Run Ceph Manager
       docker_container:
         name: ceph-mgr
+        restart_policy: always
         image: "{{ options.rbdganesha.daemon_image }}"
         network_mode: host
         command: mgr
@@ -94,6 +96,7 @@
         name: ceph-zap-device
         image: "{{ options.rbdganesha.daemon_image }}"
         command: zap_device
+        restart_policy: always
         privileged: true
         auto_remove: true
         volumes:
@@ -110,6 +113,7 @@
         network_mode: host
         pid_mode: host
         privileged: true
+        restart_policy: always
         command: osd
         volumes:
           - /opt/ceph/etc:/etc/ceph
@@ -171,6 +175,7 @@
         name: nfs-ganesha
         image: "{{ options.rbdganesha.ganesha_image }}"
         network_mode: host
+        restart_policy: always
         privileged: true
         pull: true
         volumes:

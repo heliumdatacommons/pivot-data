@@ -51,6 +51,7 @@
         image: "{{ options.cephfs.daemon_image }}"
         network_mode: host
         command: mon
+        restart_policy: always
         volumes:
           - /opt/ceph/etc:/etc/ceph
           - /opt/ceph/var/lib:/var/lib/ceph/
@@ -63,6 +64,7 @@
         name: ceph-mgr
         image: "{{ options.cephfs.daemon_image }}"
         network_mode: host
+        restart_policy: always
         command: mgr
         volumes:
           - /opt/ceph/etc:/etc/ceph
@@ -112,6 +114,7 @@
         name: ceph-osd-{{ item }}
         image: "{{ options.cephfs.daemon_image }}"
         network_mode: host
+        restart_policy: always
         pid_mode: host
         privileged: true
         command: osd
@@ -132,6 +135,7 @@
         name: cephfs-{{ options.cephfs.name }}
         image: "{{ options.cephfs.daemon_image }}"
         network_mode: host
+        restart_policy: always
         privileged: true
         command: mds
         volumes:

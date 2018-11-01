@@ -37,20 +37,20 @@ if [ -n "${FS_TYPE}" ];then
   fi
 fi
 
-rm -rf ${MOUNTPOINT}/${SUB_DIR} && mkdir -p ${MOUNTPOINT}/${SUB_DIR}
+mkdir -p ${MOUNTPOINT}/${SUB_DIR}
 cd ${MOUNTPOINT}/${SUB_DIR}
 
-exec "${@}" | parse_output.py
+${@} > /data/stats-${CLIENT_ID}.txt
+python3 /bin/parse_output.py
 
-
-function umount_fs() {
-  umount -f ${MOUNTPOINT} \
-  && echo "${MOUNTPOINT} is umounted successfully" \
-  || echo "Failed to unmount ${MOUNTPOINT}"
-}
-
-
-if [ -n "${FS_TYPE}" ];then
-  umount_fs
-  umount_fs
-fi
+#function umount_fs() {
+#  umount -f ${MOUNTPOINT} \
+#  && echo "${MOUNTPOINT} is umounted successfully" \
+#  || echo "Failed to unmount ${MOUNTPOINT}"
+#}
+#
+#
+#if [ -n "${FS_TYPE}" ];then
+#  umount_fs
+#  umount_fs
+#fi

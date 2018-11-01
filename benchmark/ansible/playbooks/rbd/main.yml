@@ -45,6 +45,7 @@
         name: ceph-mon
         image: "{{ options.rbd.daemon_image }}"
         network_mode: host
+        restart_policy: always
         command: mon
         volumes:
           - /opt/ceph/etc:/etc/ceph
@@ -58,6 +59,7 @@
         name: ceph-mgr
         image: "{{ options.rbd.daemon_image }}"
         network_mode: host
+        restart_policy: always
         command: mgr
         volumes:
           - /opt/ceph/etc:/etc/ceph
@@ -111,6 +113,7 @@
         pid_mode: host
         privileged: true
         command: osd
+        restart_policy: always
         volumes:
           - /opt/ceph/etc:/etc/ceph
           - /opt/ceph/var/lib:/var/lib/ceph/
@@ -187,6 +190,7 @@
         image: "{{ options.rbd.nfsd_image }}"
         network_mode: host
         privileged: true
+        restart_policy: always
         volumes:
           - "{{ options.rbd.mountpoint }}:/data"
         env:
