@@ -62,10 +62,10 @@ performance drop)
 ### [Benchmark Tools](tools/)
 
 - Small-file I/O
-    - [smallfile](https://github.com/distributed-system-analysis/smallfile)
+    - [ ] [smallfile](https://github.com/distributed-system-analysis/smallfile)
 - Large-file I/O
-    - [fio](http://freshmeat.sourceforge.net/projects/fio)
-    - [iozone](http://www.iozone.org/)
+    - [ ] [fio](http://freshmeat.sourceforge.net/projects/fio)
+    - [x] [iozone](http://www.iozone.org/)
 
 ### Shared filesystem solutions
 
@@ -83,6 +83,9 @@ In addition, some solutions provide multiple configurations (not for performance
 different use cases, which are likely to impact the performance, *e.g.*, the 
 [GlusterFS volume type](https://docs.gluster.org/en/v3/Administrator%20Guide/Setting%20Up%20Volumes/), 
 distribution of backend Ceph OSDs. 
+
+### Findings
+
 
 ### Frequent Asked Question
 
@@ -105,4 +108,15 @@ mounting CephFS directly.
 [A user experience](http://lists.ceph.com/pipermail/ceph-users-ceph.com/2017-November/022474.html) 
 reported in the `ceph-user` mailing list proves my intuition to some extent. 
 
-  
+#### 2. Why not use filesystems such as ext4 and XFS over Ceph RBD instead of NFS?
+
+Ceph RBD is exposed as a local *block device* rather than a file system to the clients. In other 
+word, it is unable to handle file and metadata management, which a file system is responsible for. 
+In the experiment, when mapping a Ceph RBD with a file system (*XFS*) on top on multiple hosts, 
+the content in the file system cannot be synchronized in time and requires manual mount/unmount to 
+force the synchronization. As reported in [this thread](), running *ext4* with `-m 0` (the mode in 
+which metadata is maintained in the file system instead of the OS) tends to result in 
+synchronization problems due to the inability of the local file system in handling concurrent 
+operations performed by multiple distributed clients. In contrast, NFS is a known shared file system 
+able to properly handle concurrent operations from multiple clients. Hence, it is advisable to use 
+NFS on top of Ceph RBD to provide shared storage to clients.  

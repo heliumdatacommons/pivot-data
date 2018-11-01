@@ -3,7 +3,7 @@ ansible_ssh_public_key_file: ~/.ssh/id_rsa.pub
 ansible_ssh_user: centos
 client:
   dir: /
-  host: 10.52.100.9
+  host: 10.52.100.3
   n_parallel: 1
   opts: vers=4
   type: nfs
@@ -19,7 +19,7 @@ disks:
   size: 100
   type: pd-ssd
 image: ubuntu-1804
-machine_type: n1-standard-16
+machine_type: n1-standard-4
 max_retries: 5
 mode: server
 options:

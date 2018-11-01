@@ -8,15 +8,15 @@ import numpy as np
 from subprocess import Popen, PIPE, STDOUT
 
 exp_id = 'ff95ca6b7c3c0b37ffca953f541eaa3d9e6d749a'
-n_repeat = 5
+n_repeat = 10
 
 clients = {
   # 'rbd': dict(host='10.52.100.16', type='nfs', dir='/', opts='vers=4'),
-  'cephfs': dict(host='10.52.100.11', type='ceph', dir='/', opts='mds_namespace=alpha'),
-  # 'nfsv4': dict(host='10.52.100.22', type='nfs', dir='/', opts='vers=4'),
+  # 'cephfs': dict(host='10.52.100.11', type='ceph', dir='/', opts='mds_namespace=alpha'),
+  'nfsv4': dict(host='10.52.100.3', type='nfs', dir='/', opts='vers=4'),
   # 'ganesha': dict(host='10.52.100.23', type='nfs', dir='/', opts='vers=4'),
-  'gfganesha': dict(host='10.52.100.3', type='nfs', dir='/data', opts='vers=4'),
-  'rbdganesha': dict(host='10.52.100.9', type='nfs', dir='/', opts='vers=4'),
+  # 'gfganesha': dict(host='10.52.100.3', type='nfs', dir='/data', opts='vers=4'),
+  # 'rbdganesha': dict(host='10.52.100.9', type='nfs', dir='/', opts='vers=4'),
 }
 
 
