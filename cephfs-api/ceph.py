@@ -13,6 +13,12 @@ class Ceph(Loggable, metaclass=Singleton):
     self.__host = host
     self.__port = port
 
+  async def get_fs(self, name):
+    status, _, _ = await self._get('/fs/get', dict(fs_name=name))
+    if status == 200:
+      return status, message(200, 'Filesystem `%s` exists'%name), _
+    return status, _, error(404, 'Filesystem `%s` is not found'%name)
+
   async def clean_fs(self, name):
     status, _, err = await self.fail_mds(name)
     errmsg = error(500, 'Failed to clean up filesystem `%s`'%name)
@@ -67,12 +73,14 @@ class Ceph(Loggable, metaclass=Singleton):
     endpoint = self.ENDPOINT_BASE + endpoint
     if params:
       endpoint = url_concat(endpoint, params)
-    return await self.__cli.get(self.__host, self.__port, endpoint, **headers)
+    return await self.__cli.get(self.__host, self.__port, endpoint, accept='application/json',
+                                **headers)
 
   async def _put(self, endpoint, params={}, body=None, **headers):
     endpoint = self.ENDPOINT_BASE + endpoint
     if params:
       endpoint = url_concat(endpoint, params)
-    return await self.__cli.put(self.__host, self.__port, endpoint, body, **headers)
+    return await self.__cli.put(self.__host, self.__port, endpoint, body, accept='application/json',
+                                **headers)
 
 

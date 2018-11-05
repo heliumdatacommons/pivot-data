@@ -11,23 +11,25 @@ class DockerClient(metaclass=Singleton):
     self.__cli = docker.from_env()
 
   async def create_container(self, image, command, name,
-                             privileged=False, network='host', environment={}, volumes={}):
+                             privileged=False, network='host',
+                             environment={}, volumes={}, restart_policy=dict(Name='always')):
     return await run_async(self._create_container, image, command, name,
-                           privileged, network, environment, volumes)
+                           privileged, network, environment, volumes, restart_policy)
 
   async def delete_container(self, name):
     return await run_async(self._delete_container, name)
 
-  def _create_container(self, image, command, name,
-                        privileged=False, network='host', environment={}, volumes={}):
+  def _create_container(self, image, command, name, privileged, network,
+                        environment, volumes, restart_policy):
     try:
       contr = self.__cli.containers.run(image, command,
-                                        name='%s' % name,
+                                        name='%s'%name,
                                         privileged=privileged,
                                         network=network,
                                         environment=dict(environment),
                                         volumes=dict(volumes),
-                                        detach=True)
+                                        detach=True,
+                                        restart_policy=dict(restart_policy))
       return 201, contr, None
     except APIError as e:
       if e.status_code == 409:

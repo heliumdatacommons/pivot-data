@@ -63,6 +63,11 @@ class FileSystemHandler(RequestHandler):
     self.__docker = DockerClient()
     self.__ceph = Ceph(options.ceph_api_host, options.ceph_api_port)
 
+  async def get(self, name):
+    status, msg, err = await self.__ceph.get_fs(name)
+    self.set_status(status)
+    self.write(msg if status == 200 else err)
+
   async def delete(self, name):
     status, msg, err = await self.__docker.delete_container('cephfs-%s'%name)
     if status == 404:
