@@ -1,0 +1,26 @@
+{
+    "Description": "CephFS Volume Driver",
+    "Entrypoint": ["/usr/bin/python3", "/opt/src/plugin.py"],
+    "PropagatedMount": "/mnt/cephfs",
+    "Network": {
+        "Type": "host"
+    },
+    "Interface" : {
+        "Types": ["docker.volumedriver/1.0"],
+        "Socket": "cephfs.sock"
+    },
+    "Linux": {
+        "Capabilities": ["CAP_SYS_ADMIN"]
+    },
+    "WORKDIR": "/mnt/cephfs",
+    "Env": [
+        {
+            "Description": "Ceph Monitor host",
+            "Name": "CEPH_MON_HOST",
+            "Settable": [
+                "value"
+            ],
+            "Value": "127.0.0.1"
+        }
+    ]
+}
