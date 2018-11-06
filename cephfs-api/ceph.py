@@ -14,10 +14,17 @@ class Ceph(Loggable, metaclass=Singleton):
     self.__port = port
 
   async def get_fs(self, name):
-    status, _, _ = await self._get('/fs/get', dict(fs_name=name))
-    if status == 200:
-      return status, message(200, 'Filesystem `%s` exists'%name), _
-    return status, _, error(404, 'Filesystem `%s` is not found'%name)
+    status, output, _ = await self._get('/fs/get', dict(fs_name=name))
+    if status != 200:
+      return 404, None, error(404, 'Filesystem `%s` is not found'%name)
+    state = output.get('output', {}).get('mdsmap', {}).get('info', {})
+    if not state or len(state) == 0 or [v for v in state.values()][0].get('state') != 'up:active':
+      return 503, None, error(503, 'Filesystem `%s` is not yet active'%name)
+    return status, message(200, 'Filesystem `%s` is ready'%name), None
+
+  async def list_fs(self):
+    _, msg, _ = await self._get('/fs/ls')
+    return 200, [fs['name'] for fs in msg.get('output', [])], None
 
   async def clean_fs(self, name):
     status, _, err = await self.fail_mds(name)

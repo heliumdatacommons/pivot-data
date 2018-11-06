@@ -44,13 +44,13 @@ class VolumeCreateHandler(RequestHandler, Loggable):
   async def post(self):
     try:
       req = json_decode(self.request.body)
-      name, opts = req.get('Name'), dict(req.get('Opts', {}))
+      name, opts = req.get('Name'), req.get('Opts', {})
       if not name:
         status, err = 400, json_encode(dict(Err='Missing required field `Name`'))
       else:
         status, msg, err = await self.__ceph.create_volume(name, opts)
         if err:
-          err = json_encode(dict(Err=err['err']))
+          err = json_encode(dict(Err=err))
         else:
           msg = json_encode(dict(Err=''))
 
@@ -86,8 +86,7 @@ class VolumeMountHandler(RequestHandler, Loggable):
     except JSONDecodeError as e:
       self.logger.error(e)
       status, err = 422, json_encode(dict(Err='Unable to parse the request body'))
-    # self.set_status(status)
-    self.logger.info(msg)
+    self.set_status(status)
     self.write(err if err else msg)
 
 
@@ -115,12 +114,11 @@ class VolumePathHandler(RequestHandler, Loggable):
     except JSONDecodeError as e:
       self.logger.error(e)
       status, err = 422, json_encode(dict(Err='Unable to parse the request body'))
-    # self.set_status(status)
-    self.logger.info(msg)
+    self.set_status(status)
     self.write(err if err else msg)
 
 
-class VolumeUnmountHandler(RequestHandler):
+class VolumeUnmountHandler(RequestHandler, Loggable):
   """
   Unmount the CephFS using `umount -f`. The unmount step needs to be repeated for several times to
   force the unmount cleanly.
@@ -176,12 +174,11 @@ class VolumeGetHandler(RequestHandler, Loggable):
       self.logger.error(e)
       status, err = 422, json_encode(dict(Volume=dict(Name=name),
                                           Err='Unable to parse the request body'))
-    # self.set_status(status)
-    self.logger.info(msg)
+    self.set_status(status)
     self.write(err if err else msg)
 
 
-class VolumeRemoveHandler(RequestHandler):
+class VolumeRemoveHandler(RequestHandler, Loggable):
   """
   Delete the CephFS instance including:
 
@@ -213,7 +210,7 @@ class VolumeRemoveHandler(RequestHandler):
     self.write(err if err else msg)
 
 
-class VolumeListHandler(RequestHandler):
+class VolumeListHandler(RequestHandler, Loggable):
   """
   List all the volumes registered with the plugin. Since Ceph is distributed and CephFS instances
   are typically created in a distributed manner, this endpoint calls the CephFS API to get all the

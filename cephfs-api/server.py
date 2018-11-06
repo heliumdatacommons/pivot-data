@@ -1,9 +1,10 @@
 import tornado
+import asyncio
 
 from tornado.web import RequestHandler
 
 from tornado.httpserver import HTTPServer
-from tornado.escape import json_decode
+from tornado.escape import json_encode, json_decode
 from tornado.options import define, options
 
 from ceph import Ceph
@@ -26,6 +27,11 @@ class FileSystemsHandler(RequestHandler):
 
   def initialize(self):
     self.__docker = DockerClient()
+    self.__ceph = Ceph(options.ceph_api_host, options.ceph_api_port)
+
+  async def get(self):
+    _, fs_list, _ = await self.__ceph.list_fs()
+    self.write(json_encode(fs_list))
 
   async def post(self):
     """
@@ -54,7 +60,11 @@ class FileSystemsHandler(RequestHandler):
     self.set_status(status)
     if status == 409:
       err = error(status, 'Filesystem `%s` already exists'%name)
-    self.write(message(status, 'Filesystem `%s` is being created'%name) if c else err)
+    get_fs_status, _, _ = await self.__ceph.get_fs(name)
+    while get_fs_status != 200:
+      get_fs_status, _, _ = await self.__ceph.get_fs(name)
+      await asyncio.sleep(1)
+    self.write(message(status, 'Filesystem `%s` is created'%name) if c else err)
 
 
 class FileSystemHandler(RequestHandler):
