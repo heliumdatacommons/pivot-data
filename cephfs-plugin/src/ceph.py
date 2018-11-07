@@ -4,6 +4,7 @@ import shlex
 import shutil
 
 from subprocess import Popen, PIPE
+from multiprocessing import Lock
 from tornado.escape import json_encode
 
 from util import Loggable, AsyncHttpClientWrapper, Singleton, run_async
@@ -19,6 +20,7 @@ class Ceph(Loggable, metaclass=Singleton):
   def __init__(self):
     self.__cli = AsyncHttpClientWrapper()
     self.__ceph_mon_host = self._get_ceph_mon_host()
+    self.__lock = Lock()
 
   async def list_volumes(self):
     return await self._list_volumes()
@@ -55,10 +57,11 @@ class Ceph(Loggable, metaclass=Singleton):
 
   def _mount_volume(self, name):
     mountpoint = '%s/%s'%(PROPAGATED_MOUNT, name)
-    self.logger.info('Does the mountpoint %s exist?: %s'%(mountpoint, os.path.exists(mountpoint)))
+    self.__lock.acquire(blocking=True)
     if not os.path.exists(mountpoint):
       os.makedirs(mountpoint, mode=0o777)
     if os.path.ismount(mountpoint):
+      self.__lock.release()
       return 200, mountpoint, None
     self.logger.info('mount -t ceph %s:/ %s ' 
                      '-o mds_namespace=%s'%(self.__ceph_mon_host, mountpoint, name))
@@ -66,6 +69,7 @@ class Ceph(Loggable, metaclass=Singleton):
                                  '-o mds_namespace=%s'%(self.__ceph_mon_host, mountpoint, name))
     if err:
       return 500, None, err
+    self.__lock.release()
     return 200, mountpoint, None
 
   async def _get_volume(self, name):

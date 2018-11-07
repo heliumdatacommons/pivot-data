@@ -44,21 +44,13 @@ class VolumeCreateHandler(RequestHandler, Loggable):
   async def post(self):
     try:
       req = json_decode(self.request.body)
-      name, opts = req.get('Name'), req.get('Opts', {})
-      if not name:
-        status, err = 400, json_encode(dict(Err='Missing required field `Name`'))
-      else:
-        status, msg, err = await self.__ceph.create_volume(name, opts)
-        if err:
-          err = json_encode(dict(Err=err))
-        else:
-          msg = json_encode(dict(Err=''))
-
+      status, msg, err = await self.__ceph.create_volume(req.get('Name'), req.get('Opts', {}))
+      resp = json_encode(dict(Err=('' if status ==200 else err)))
     except JSONDecodeError as e:
       self.logger.error(e)
-      status, err = 422, json_encode(dict(Err='Unable to parse the request body'))
+      status, resp = 422, json_encode(dict(Err='Unable to parse the request body'))
     self.set_status(status)
-    self.write(err if err else msg)
+    self.write(resp)
 
 
 class VolumeMountHandler(RequestHandler, Loggable):
@@ -74,20 +66,13 @@ class VolumeMountHandler(RequestHandler, Loggable):
   async def post(self):
     try:
       req = json_decode(self.request.body)
-      name = req.get('Name')
-      if not name:
-        status, err = 400, json_encode(dict(Err='Missing required field `Name`'))
-      else:
-        status, mountpoint, err = await self.__ceph.mount_volume(name)
-        if status == 200:
-          msg = json_encode(dict(Mountpoint=mountpoint, Err=''))
-        else:
-          err = json_encode(dict(Err=err))
+      status, mountpoint, err = await self.__ceph.mount_volume(req.get('Name'))
+      resp = json_encode(dict(Mountpoint=mountpoint, Err='') if status == 200 else dict(Err=err))
     except JSONDecodeError as e:
       self.logger.error(e)
-      status, err = 422, json_encode(dict(Err='Unable to parse the request body'))
+      status, resp = 422, json_encode(dict(Err='Unable to parse the request body'))
     self.set_status(status)
-    self.write(err if err else msg)
+    self.write(resp)
 
 
 class VolumePathHandler(RequestHandler, Loggable):
@@ -102,20 +87,13 @@ class VolumePathHandler(RequestHandler, Loggable):
   async def post(self):
     try:
       req = json_decode(self.request.body)
-      name = req.get('Name')
-      if not name:
-        status, err = 400, json_encode(dict(Err='Missing required field `Name`'))
-      else:
-        status, mountpoint, err = await self.__ceph.get_volume(name)
-        if status == 200:
-          msg = json_encode(dict(Mountpoint=mountpoint, Err=''))
-        else:
-          err = json_encode(dict(Err=err))
+      status, mountpoint, err = await self.__ceph.get_volume(req.get('Name'))
+      resp = json_encode(dict(Mountpoint=mountpoint, Err='') if status == 200 else dict(Err=err))
     except JSONDecodeError as e:
       self.logger.error(e)
-      status, err = 422, json_encode(dict(Err='Unable to parse the request body'))
+      status, resp = 422, json_encode(dict(Err='Unable to parse the request body'))
     self.set_status(status)
-    self.write(err if err else msg)
+    self.write(resp)
 
 
 class VolumeUnmountHandler(RequestHandler, Loggable):
@@ -133,20 +111,13 @@ class VolumeUnmountHandler(RequestHandler, Loggable):
   async def post(self):
     try:
       req = json_decode(self.request.body)
-      name = req.get('Name')
-      if not name:
-        status, err = 400, json_encode(dict(Err='Missing required field `Name`'))
-      else:
-        status, mountpoint, err = await self.__ceph.unmount_volume(name)
-        if status == 200:
-          msg = json_encode(dict(Err=''))
-        else:
-          err = json_encode(dict(Err=err))
+      status, mountpoint, err = await self.__ceph.unmount_volume(req.get('Name'))
+      resp = json_encode(dict(Err=('' if status == 200 else err)))
     except JSONDecodeError as e:
       self.logger.error(e)
-      status, err = 422, json_encode(dict(Err='Unable to parse the request body'))
+      status, resp = 422, json_encode(dict(Err='Unable to parse the request body'))
     self.set_status(status)
-    self.write(err if err else msg)
+    self.write(resp)
 
 
 class VolumeGetHandler(RequestHandler, Loggable):
@@ -162,20 +133,15 @@ class VolumeGetHandler(RequestHandler, Loggable):
     try:
       req = json_decode(self.request.body)
       name = req.get('Name')
-      if not name:
-        status, err = 400, json_encode(dict(Err='Missing required field `Name`'))
-      else:
-        status, mountpoint, err = await self.__ceph.get_volume(name)
-        if status == 200:
-          msg = json_encode(dict(Volume=dict(Name=name, Mountpoint=mountpoint), Err=''))
-        else:
-          err = json_encode(dict(Volume=dict(Name=name), Err=err))
+      status, mountpoint, err = await self.__ceph.get_volume(name)
+      resp = json_encode(dict(Volume=dict(Name=name, Mountpoint=mountpoint), Err='')
+                         if status == 200 else dict(Volume=dict(Name=name), Err=err))
     except JSONDecodeError as e:
       self.logger.error(e)
-      status, err = 422, json_encode(dict(Volume=dict(Name=name),
+      status, resp = 422, json_encode(dict(Volume=dict(Name=name),
                                           Err='Unable to parse the request body'))
     self.set_status(status)
-    self.write(err if err else msg)
+    self.write(resp)
 
 
 class VolumeRemoveHandler(RequestHandler, Loggable):
@@ -194,20 +160,13 @@ class VolumeRemoveHandler(RequestHandler, Loggable):
   async def post(self):
     try:
       req = json_decode(self.request.body)
-      name = req.get('Name')
-      if not name:
-        status, err = 400, json_encode(dict(Err='Missing required field `Name`'))
-      else:
-        status, mountpoint, err = await self.__ceph.delete_volume(name)
-        if status == 200:
-          msg = json_encode(dict(Err=''))
-        else:
-          err = json_encode(dict(Err=err))
+      status, mountpoint, err = await self.__ceph.delete_volume(req.get('Name'))
+      resp = json_encode(dict(Err=('' if status == 200 else err)))
     except JSONDecodeError as e:
       self.logger.error(e)
       status, err = 422, json_encode(dict(Err='Unable to parse the request body'))
     self.set_status(status)
-    self.write(err if err else msg)
+    self.write(resp)
 
 
 class VolumeListHandler(RequestHandler, Loggable):
