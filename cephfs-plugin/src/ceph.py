@@ -39,7 +39,7 @@ class Ceph(Loggable, metaclass=Singleton):
     return await run_async(self._unmount_volume, name)
 
   async def delete_volume(self, name):
-    return await self.__cli.delete(CEPHFS_API_HOST, CEPHFS_API_PORT, '/fs/%s'%name)
+    return await self._delete_volume(name)
 
   async def _list_volumes(self):
 
@@ -57,8 +57,8 @@ class Ceph(Loggable, metaclass=Singleton):
 
   def _mount_volume(self, name):
     mountpoint = '%s/%s'%(PROPAGATED_MOUNT, name)
-    self.__lock.acquire(blocking=True)
-    if not os.path.exists(mountpoint):
+    self.__lock.acquire()
+    while not os.path.isdir(mountpoint):
       os.makedirs(mountpoint, mode=0o777)
     if os.path.ismount(mountpoint):
       self.__lock.release()
@@ -90,14 +90,20 @@ class Ceph(Loggable, metaclass=Singleton):
         break
       if err:
         return 500, None, 'Failed to unmount %s: %s'%(mountpoint, err)
-    shutil.rmtree(mountpoint, ignore_errors=True)
     return 200, None, None
+
+  async def _delete_volume(self, name):
+    mountpoint = '%s/%s' % (PROPAGATED_MOUNT, name)
+
+    def remove_mountpoint(mountpoint):
+      shutil.rmtree(mountpoint, ignore_errors=True)
+
+    await run_async(remove_mountpoint, mountpoint)
+    return await self.__cli.delete(CEPHFS_API_HOST, CEPHFS_API_PORT, '/fs/%s' % name)
 
   def _execute_cmd(self, cmd):
     out, err = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE).communicate()
     out, err = str(out, 'utf-8'), str(err, 'utf-8')
-    self.logger.info('Stdout: %s'%out)
-    self.logger.info('Stderr: %s'%err)
     return out, err
 
   def _get_ceph_mon_host(self):

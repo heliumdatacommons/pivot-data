@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-PLUGIN_NAME='heliumdatacommons/cephfs-plugin'
+PLUGIN_NAME='heliumdatacommons/cephfs'
 
 rm -rf rootfs
 docker build -t rootfsimage . --no-cache
