@@ -10,7 +10,7 @@ from tornado.escape import json_encode
 from util import Loggable, AsyncHttpClientWrapper, Singleton, run_async
 
 
-CEPHFS_API_HOST = '127.0.0.1'
+CEPHFS_API_HOST = str(os.environ.get('CEPHFS_API_HOST','127.0.0.1'))
 CEPHFS_API_PORT = int(os.environ.get('CEPHFS_API_PORT', 8080))
 PROPAGATED_MOUNT = '/mnt/cephfs'
 

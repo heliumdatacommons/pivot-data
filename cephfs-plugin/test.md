@@ -64,7 +64,7 @@ Tests
     tmpfs           3.7G     0  3.7G   0% /sys/fs/cgroup
     10.52.100.3:/    93G     0   93G   0% /tmp
   ```
-- ![#008000](https://placehold.it/15/008000/000000?text=+)  
+- ![#008000](https://placehold.it/15/008000/000000?text=+)
   Create and mount a volume to multiple containers simultaneously
   ```console 
     $ docker run -d --name cephfs-1 \
@@ -86,7 +86,7 @@ Tests
   
   **Solution:** [Resolved by adding lock on volume mount to avoid race](https://github.com/heliumdatacommons/pivot-data/blob/c63df998ad5f913061fd2ad7bde57de06eb10f27/cephfs-plugin/src/ceph.py#L60-L64) 
   
-- ![#008000](https://placehold.it/15/008000/000000?text=+)  
+- ![#008000](https://placehold.it/15/008000/000000?text=+)
   Mount an existing volume to multiple containers simultaneously
   ```console 
     $ for j in `seq 10`;do
