@@ -11,7 +11,7 @@ from ceph import Ceph
 from container import DockerClient
 from util import message, error
 
-define('address', default='127.0.0.1', help='binding address')
+define('address', default='0.0.0.0', help='binding address')
 define('port', default=8080, help='Port to listen on')
 define('ceph_api_host', default='localhost', help='The host where Ceph REST API runs on')
 define('ceph_api_port', default=5000, help='Port which Ceph REST API listens on')
