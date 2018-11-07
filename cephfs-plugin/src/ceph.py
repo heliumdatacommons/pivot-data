@@ -6,7 +6,7 @@ import shutil
 from subprocess import Popen, PIPE
 from tornado.escape import json_encode
 
-from util import Loggable, AsyncHttpClientWrapper, Singleton
+from util import Loggable, AsyncHttpClientWrapper, Singleton, run_async
 
 
 CEPHFS_API_HOST = '127.0.0.1'
@@ -28,24 +28,29 @@ class Ceph(Loggable, metaclass=Singleton):
                                  body=json_encode(dict(name=name)))
 
   async def mount_volume(self, name):
-    return self._mount_volume(name)
+    return await run_async(self._mount_volume, name)
 
   async def get_volume(self, name):
     return await self._get_volume(name)
 
   async def unmount_volume(self, name):
-    return self._unmount_volume(name)
+    return await run_async(self._unmount_volume, name)
 
   async def delete_volume(self, name):
     return await self.__cli.delete(CEPHFS_API_HOST, CEPHFS_API_PORT, '/fs/%s'%name)
 
   async def _list_volumes(self):
+
+    def find_mountpoint(vols):
+      vols = [dict(Name=v) for v in vols]
+      for v in vols:
+        mountpoint = '%s/%s' % (PROPAGATED_MOUNT, v['Name'])
+        if os.path.exists(mountpoint) and os.path.ismount(mountpoint):
+          v['Mountpoint'] = mountpoint
+      return vols
+
     _, vols, _ = await self.__cli.get(CEPHFS_API_HOST, CEPHFS_API_PORT, '/fs')
-    vols = [dict(Name=v) for v in vols]
-    for v in vols:
-      mountpoint = '%s/%s'%(PROPAGATED_MOUNT, v['Name'])
-      if os.path.exists(mountpoint) and os.path.ismount(mountpoint):
-        v['Mountpoint'] = mountpoint
+    vols = await run_async(find_mountpoint, vols)
     return 200, vols, None
 
   def _mount_volume(self, name):
