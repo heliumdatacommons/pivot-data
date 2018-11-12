@@ -1,7 +1,7 @@
 [global]
 fsid = ab9314b3-5b09-4fb7-b457-e90b3a05a777
-mon initial members = {{ ansible_hostname }}
-mon host = {{ ansible_default_ipv4.address }}
+mon initial members = {{ ceph_mon_hostnames | join(', ') }}
+mon host = {{ ceph_mon_ips | join(', ') }}
 public network = {{ supernet }}
 cluster network = {{ supernet }}
 osd journal size = 100

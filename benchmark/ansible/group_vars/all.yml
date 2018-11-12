@@ -11,22 +11,24 @@ disks:
 - delete_on_termination: true
   mode: READ_WRITE
   name: boot
-  size: 30
+  size: 10
   type: pd-ssd
 - delete_on_termination: true
   mode: READ_WRITE
   name: ext-0
   size: 100
-  type: pd-ssd
-image: ubuntu-1804
-machine_type: n1-standard-4
+  type: pd-standard
+
+image: ceph-ubuntu-1804 #ubuntu-1804
+custom_image: true
+machine_type: n1-standard-2
 max_retries: 5
 mode: server
 options:
   cephfs:
     daemon_image: ceph/daemon:latest-luminous
-    mds_group_size: 1
-    mon_group_size: 1
+    mds_group_size: 0
+    mon_group_size: 3
     name: alpha
   ganesha:
     docker_image: janeczku/nfs-ganesha
@@ -66,10 +68,17 @@ options:
     num_pgs: 8
     unwanted_rbd_features: exclusive-lock object-map fast-diff deep-flatten
 preemptible: false
-project: helium-dc
-running: true
+project: helium-skunkworks
+running: false
 supernet: 10.52.0.0/16
 zone:
-- end: 1
-  name: us-east1-b
+- name: us-east1-b
   start: 1
+  end: 3
+- name: us-east4-c
+  start: 1
+  end: 2
+- name: us-west1-a
+  start: 1
+  end: 2
+

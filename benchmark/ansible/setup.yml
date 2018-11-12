@@ -9,7 +9,7 @@
   tasks:
     - name: Install Python
       raw: apt-get update && apt-get install -y python
-      when: not running
+      when: not running and not custom_image
       register: _install_python
       until: not _install_python.failed
       retries: 3

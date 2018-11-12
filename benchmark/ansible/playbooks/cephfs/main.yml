@@ -7,6 +7,7 @@
         name: ceph-base
         update_cache: true
         autoremove: true
+      when: not custom_image
 
     - name: Load Ceph kernel module
       modprobe:
@@ -19,8 +20,10 @@
         state: directory
         recurse: true
       with_items:
-      - /opt/ceph/etc
-      - /opt/ceph/var/lib/bootstrap-osd
+        - /opt/ceph/etc
+        - /opt/ceph/var/lib/bootstrap-osd
+        - /opt/ceph/var/lib/bootstrap-rbd
+      when: not custom_image
 
 - hosts: localhost
   gather_facts: false
@@ -31,18 +34,34 @@
         groupname: ceph-mon
       with_items: "{{ groups[fs][:options.cephfs.mon_group_size] }}"
 
-    - name: Assign host(s) to the CephFS group
+    - name: Assign host(s) to the Ceph MDS group
       add_host:
         hostname: "{{ item }}"
         groupname: ceph-mds
       with_items: "{{ groups[fs][:options.cephfs.mds_group_size] }}"
+
+- hosts: cephfs
+  tasks:
+    - name: Set Ceph Monitor hostnames
+      set_fact:
+        ceph_mon_hostnames: >
+          {{ ceph_mon_hostnames | default([]) }}
+          + [ '{{ hostvars[item].ansible_hostname }}' ]
+      with_items: "{{ groups['ceph-mon'] }}"
+
+    - name: Set Ceph Monitor IP addresses
+      set_fact:
+        ceph_mon_ips: >
+          {{ ceph_mon_ips | default([]) }}
+          + [ '{{ hostvars[item].ansible_default_ipv4.address }}' ]
+      with_items: "{{ groups['ceph-mon'] }}"
 
 - hosts: ceph-mon
   become: true
   tasks:
     - name: Create Ceph configuration file
       template:
-        src: ceph.conf.mon.j2
+        src: ceph.conf.j2
         dest: /opt/ceph/etc/ceph.conf
 
     - name: Run Ceph Monitor
@@ -58,6 +77,7 @@
         env:
           MON_IP: "{{ ansible_default_ipv4.address }}"
           CEPH_PUBLIC_NETWORK: "{{ supernet }}"
+          CEPH_CLUSTER_NETWORK: "{{ supernet }}"
 
     - name: Run Ceph Manager
       docker_container:
@@ -70,22 +90,38 @@
           - /opt/ceph/etc:/etc/ceph
           - /opt/ceph/var/lib:/var/lib/ceph/
 
+    - name: Run Ceph REST API
+      docker_container:
+        name: ceph-restapi
+        image: "{{ options.cephfs.daemon_image }}"
+        network_mode: host
+        restart_policy: always
+        command: restapi
+        volumes:
+          - /opt/ceph/etc:/etc/ceph
+          - /opt/ceph/var/lib:/var/lib/ceph/
+
 - hosts: cephfs
   become: true
   tasks:
     - name: Create Ceph configuration file
       template:
-        src: ceph.conf.osd.j2
+        src: ceph.conf.j2
         dest: "{{ item }}"
         force: false
       with_items:
         - /opt/ceph/etc/ceph.conf
         - /etc/ceph/ceph.conf
 
-    - name: Create an empty keyring file as placeholder
+    - name: Create empty keyring files as placeholder
       file:
-        path: /opt/ceph/var/lib/bootstrap-osd/ceph.keyring
+        path: "{{ item }}"
         state: touch
+      with_items:
+        - /opt/ceph/var/lib/bootstrap-osd/ceph.keyring
+        - /opt/ceph/etc/ceph.client.admin.keyring
+      when: not custom_image
+
 
     - name: Find attached block devices
       shell: >
@@ -125,6 +161,26 @@
         env:
           OSD_DEVICE: /dev/{{ item }}
       with_items: "{{ block_devices.stdout_lines }}"
+
+    - name: Run Ceph REST API
+      docker_container:
+        name: ceph-restapi
+        image: "{{ options.cephfs.daemon_image }}"
+        network_mode: host
+        restart_policy: always
+        command: restapi
+        volumes:
+          - /opt/ceph/etc:/etc/ceph
+          - /opt/ceph/var/lib:/var/lib/ceph/
+
+    - name: Run CephFS API
+      docker_container:
+        name: cephfs-api
+        image: dchampion24/cephfs-api
+        network_mode: host
+        restart_policy: always
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
 
 - hosts: ceph-mds
   gather_facts: false
