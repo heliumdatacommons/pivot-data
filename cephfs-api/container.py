@@ -1,53 +1,31 @@
-import docker
+import shlex
 
-from docker.errors import APIError
-
-from util import run_async, message, error, Singleton
+from util import Singleton, Loggable, AsyncHttpClientWrapper
 
 
-class DockerClient(metaclass=Singleton):
+class MarathonClient(Loggable, metaclass=Singleton):
 
-  def __init__(self):
-    self.__cli = docker.from_env()
+  def __init__(self, masters=[], port=8080):
+    self.__masters = list(masters)
+    self.__port = port
+    self.__cli = AsyncHttpClientWrapper()
 
-  async def create_container(self, image, command, name,
-                             privileged=False, network='host',
-                             environment={}, volumes={}, restart_policy=dict(Name='always')):
-    return await run_async(self._create_container, image, command, name,
-                           privileged, network, environment, volumes, restart_policy)
+  async def create_container(self, name, group, image, command, privileged=False, network='host',
+                             cpus=1, mem=2048, env={}, volumes={}):
+    req = dict(id='/%s/%s'%(group, name),
+               cpus=cpus, mem=mem, disk=0,
+               args=shlex.split(command),
+               env={str(k): str(v) for k, v in env.items()},
+               container=dict(type='DOCKER',
+                              volumes=list(volumes),
+                              docker=dict(image=image,
+                                          network=network.upper(),
+                                          privileged=privileged,
+                                          forcePullImage=True)),
+               upgradeStrategy=dict(minimumHealthCapacity=0, maximumOverCapacity=0))
+    return await self.__cli.post(self.__masters[0], self.__port, '/v2/apps', req)
 
-  async def delete_container(self, name):
-    return await run_async(self._delete_container, name)
-
-  def _create_container(self, image, command, name, privileged, network,
-                        environment, volumes, restart_policy):
-    try:
-      contr = self.__cli.containers.run(image, command,
-                                        name='%s'%name,
-                                        privileged=privileged,
-                                        network=network,
-                                        environment=dict(environment),
-                                        volumes=dict(volumes),
-                                        detach=True,
-                                        restart_policy=dict(restart_policy))
-      return 201, contr, None
-    except APIError as e:
-      if e.status_code == 409:
-        err = 'Container `%s` already exists'%name
-      else:
-        err = e.explanation
-      return e.status_code, None, error(e.status_code, err)
-
-  def _delete_container(self, name):
-    try:
-      contr = self.__cli.containers.get('%s'%name)
-      contr.remove(force=True)
-      return 200, message(200, 'Container `%s` has been removed'%name), None
-    except APIError as e:
-      if e.status_code == 404:
-        err = 'Container `%s` is not found'%name
-      else:
-        err = e.explanation
-      return e.status_code, None, error(e.status_code, err)
+  async def delete_container(self, name, group):
+    return await self.__cli.delete(self.__masters[0], self.__port, '/v2/apps/%s/%s'%(group, name))
 
 
