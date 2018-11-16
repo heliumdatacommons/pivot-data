@@ -63,9 +63,10 @@ class FileSystemsHandler(RequestHandler):
       return dict(containerPath=container_path, hostPath=host_path, mode=mode)
 
     status, c, err = await marathon.create_container(name, 'cephfs', ceph_daemon_image,
-                                                     'mds',env=dict(CEPHFS_CREATE=1,
-                                                                    CEPHFS_NAME=name,
-                                                                    MDS_NAME='mds-%s'%name),
+                                                     'mds',
+                                                     env=dict(CEPHFS_CREATE=1,
+                                                              CEPHFS_NAME=name,
+                                                              MDS_NAME='mds-%s'%name),
                                                      volumes=[
                                                        volume('/etc/ceph', cfg_dir, 'RW'),
                                                        volume('/var/lib/ceph', lib_dir, 'RW')
@@ -78,7 +79,7 @@ class FileSystemsHandler(RequestHandler):
         await sleep(1)
     elif status == 409:
       err = error(status, 'Filesystem `%s` already exists'%name)
-    self.write(message(status, 'Filesystem `%s` is created'%name) if c else err)
+    self.write(message(status, 'Filesystem `%s` has been created'%name) if c else err)
 
 
 class FileSystemHandler(RequestHandler):

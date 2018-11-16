@@ -12,7 +12,7 @@ class MarathonClient(Loggable, metaclass=Singleton):
     self.__cli = AsyncHttpClientWrapper()
 
   async def create_container(self, name, group, image, command, privileged=False, network='host',
-                             cpus=.1, mem=256, env={}, volumes={}):
+                             cpus=.5, mem=1024, env={}, volumes={}):
     req = dict(id='/%s/%s'%(group, name),
                cpus=cpus, mem=mem, disk=0,
                args=shlex.split(command),
@@ -21,6 +21,9 @@ class MarathonClient(Loggable, metaclass=Singleton):
                               volumes=list(volumes),
                               docker=dict(image=image,
                                           network=network.upper(),
+                                          parameters=[
+                                            dict(key='rm', value=True)
+                                          ],
                                           privileged=privileged,
                                           forcePullImage=True)),
                upgradeStrategy=dict(minimumHealthCapacity=0, maximumOverCapacity=0))
