@@ -94,6 +94,7 @@ class FileSystemHandler(RequestHandler):
     self.write(msg if status == 200 else err)
 
   async def delete(self, name):
+    erasure = self.get_query_argument('erasure', False)
     status, msg, err = await self.__marathon.delete_container(name, 'cephfs')
     if status == 404:
       err = error(status, 'Filesystem `%s` is not found'%name)
@@ -101,12 +102,15 @@ class FileSystemHandler(RequestHandler):
       self.set_status(status)
       self.write(err)
       return
-    status, msg, err = await self.__ceph.clean_fs(name)
-    while status != 200:
+    msg = message(status, 'Filesystem `%s` has been deleted'%name)
+    if erasure:
       status, msg, err = await self.__ceph.clean_fs(name)
-      await sleep(1)
+      while status != 200:
+        status, msg, err = await self.__ceph.clean_fs(name)
+        await sleep(1)
+      msg = message(status, 'Filesystem `%s` has been erased'%name)
     self.set_status(status)
-    self.write(message(status, 'Filesystem `%s` has been deleted' % name) if status == 200 else err)
+    self.write(msg if status == 200 else err)
 
 
 if '__main__' == __name__:

@@ -22,7 +22,7 @@ class MarathonClient(Loggable, metaclass=Singleton):
                               docker=dict(image=image,
                                           network=network.upper(),
                                           parameters=[
-                                            dict(key='rm', value=True)
+                                            dict(key='rm', value='true')
                                           ],
                                           privileged=privileged,
                                           forcePullImage=True)),
