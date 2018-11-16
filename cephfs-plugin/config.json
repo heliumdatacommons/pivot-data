@@ -21,22 +21,6 @@
                 "value"
             ],
             "Value": "127.0.0.1"
-        },
-        {
-            "Description": "CephFS API host",
-            "Name": "CEPHFS_API_HOST",
-            "Settable": [
-                "value"
-            ],
-            "Value": "127.0.0.1"
-        },
-        {
-            "Description": "CephFS API port",
-            "Name": "CEPHFS_API_PORT",
-            "Settable": [
-                "value"
-            ],
-            "Value": 8080
         }
     ]
 }

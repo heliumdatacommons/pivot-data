@@ -139,7 +139,7 @@ class VolumeGetHandler(RequestHandler, Loggable):
     except JSONDecodeError as e:
       self.logger.error(e)
       status, resp = 422, json_encode(dict(Volume=dict(Name=name),
-                                          Err='Unable to parse the request body'))
+                                           Err='Unable to parse the request body'))
     self.set_status(status)
     self.write(resp)
 
