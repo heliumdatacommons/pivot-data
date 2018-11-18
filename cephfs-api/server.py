@@ -10,7 +10,7 @@ from tornado.options import define, options
 
 from ceph import Ceph
 from container import MarathonClient
-from util import message, error
+from util import message, error, Loggable
 
 define('address', default='0.0.0.0', help='binding address')
 define('port', default=8080, help='Port to listen on')
@@ -30,7 +30,7 @@ def validate_marathon_masters():
     sys.exit(1)
 
 
-class FileSystemsHandler(RequestHandler):
+class FileSystemsHandler(RequestHandler, Loggable):
   """
 
   """
@@ -82,7 +82,7 @@ class FileSystemsHandler(RequestHandler):
     self.write(message(status, 'Filesystem `%s` has been created'%name) if c else err)
 
 
-class FileSystemHandler(RequestHandler):
+class FileSystemHandler(RequestHandler, Loggable):
 
   def initialize(self):
     self.__marathon = MarathonClient(options.marathon_masters, options.marathon_port)
@@ -95,10 +95,16 @@ class FileSystemHandler(RequestHandler):
 
   async def delete(self, name):
     erasure = self.get_query_argument('erasure', False)
+    if not isinstance(erasure, bool) and erasure.lower() not in ('true', 'false'):
+      self.set_status(400)
+      self.write(error(400, 'Unrecognized `erasure` value: %s'%erasure))
+      return
+    erasure = erasure and erasure.lower() == 'true'
+    self.logger.debug('Erasure?: %s'%erasure)
     status, msg, err = await self.__marathon.delete_container(name, 'cephfs')
     if status == 404:
-      err = error(status, 'Filesystem `%s` is not found'%name)
-    if status != 200:
+      self.logger.info('The MDS container for `%s` has already been deleted'%name)
+    if status != 200 and status != 404:
       self.set_status(status)
       self.write(err)
       return
