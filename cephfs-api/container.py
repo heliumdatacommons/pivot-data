@@ -11,6 +11,16 @@ class MarathonClient(Loggable, metaclass=Singleton):
     self.__port = port
     self.__cli = AsyncHttpClientWrapper()
 
+  async def get_container(self, name, group):
+    master, port = self.__masters[0], self.__port
+    status, contr, err = await self.__cli.get(master, port, '/v2/apps/%s/%s'%(group, name))
+    if status != 200:
+      return status, contr, err
+    tasks = contr.get('app', {}).get('tasks', [])
+    if len(tasks) == 0 or tasks[0].get('state') != 'TASK_RUNNING':
+      return 404, None, 'MDS of `%s` is not yet ready'%name
+    return 200, 'MDS of `%s` is ready', None
+
   async def create_container(self, name, group, image, command, privileged=False, network='host',
                              cpus=.5, mem=1024, env={}, volumes={}):
     req = dict(id='/%s/%s'%(group, name),

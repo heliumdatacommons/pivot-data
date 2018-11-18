@@ -89,6 +89,11 @@ class FileSystemHandler(RequestHandler, Loggable):
     self.__ceph = Ceph(options.ceph_api_host, options.ceph_api_port)
 
   async def get(self, name):
+    status, msg, err = await self.__marathon.get_container(name, 'cephfs')
+    if status != 200:
+      self.set_status(status)
+      self.write(err)
+      return
     status, msg, err = await self.__ceph.get_fs(name)
     self.set_status(status)
     self.write(msg if status == 200 else err)
