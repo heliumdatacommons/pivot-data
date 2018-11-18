@@ -99,7 +99,7 @@ class Ceph(Loggable, metaclass=Singleton):
       shutil.rmtree(mountpoint, ignore_errors=True)
 
     await run_async(remove_mountpoint, mountpoint)
-    return await self.__cli.delete(CEPHFS_API_HOST, CEPHFS_API_PORT, '/fs/%s' % name)
+    return await self.__cli.delete(CEPHFS_API_HOST, CEPHFS_API_PORT, '/fs/%s?erasure=true' % name)
 
   def _execute_cmd(self, cmd):
     out, err = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE).communicate()
