@@ -68,6 +68,7 @@ class Ceph(Loggable, metaclass=Singleton):
     out, err = self._execute_cmd('mount -t ceph %s:/ %s ' 
                                  '-o mds_namespace=%s'%(self.__ceph_mon_host, mountpoint, name))
     if err:
+      self.__lock.release()
       return 500, None, err
     self.__lock.release()
     return 200, mountpoint, None

@@ -45,7 +45,7 @@ class VolumeCreateHandler(RequestHandler, Loggable):
     try:
       req = json_decode(self.request.body)
       status, msg, err = await self.__ceph.create_volume(req.get('Name'), req.get('Opts', {}))
-      resp = json_encode(dict(Err=('' if status ==200 else err)))
+      resp = json_encode(dict(Err=('' if status == 200 else err)))
     except JSONDecodeError as e:
       self.logger.error(e)
       status, resp = 422, json_encode(dict(Err='Unable to parse the request body'))
