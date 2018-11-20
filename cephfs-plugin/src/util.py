@@ -52,7 +52,7 @@ class Loggable(object):
     return logger
 
 
-class AsyncHttpClientWrapper:
+class AsyncHttpClientWrapper(Loggable):
 
   def __init__(self):
     self.__cli = AsyncHTTPClient()
