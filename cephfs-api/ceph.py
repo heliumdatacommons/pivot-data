@@ -1,4 +1,6 @@
+from multiprocessing import Lock
 from tornado.httputil import url_concat
+from tornado.gen import multi
 
 from util import AsyncHttpClientWrapper, Singleton, Loggable, message, error
 
@@ -12,19 +14,40 @@ class Ceph(Loggable, metaclass=Singleton):
     self.__cli = AsyncHttpClientWrapper()
     self.__host = host
     self.__port = port
+    self.__lock = Lock()
+
+  async def create_data_pool(self, name, rule='replicated_rule', n_replica=1, pg_num=8):
+    rule = not rule and 'replicated_rule'
+    status, output, err = await self._put('/osd/pool/create', dict(pool=name,
+                                                                   pg_num=pg_num, rule=rule))
+    if status != 200:
+      return status, None, error(status, err)
+    if n_replica != 3:
+      status, output, err = await self._put('/osd/pool/set', dict(pool=name,
+                                                                  var='size', val=n_replica))
+      if status != 200:
+        self.logger.info(err)
+    return status, message(200, 'Data pool `%s` has been created successfully'%name), None
+
+  async def get_crush_rules(self):
+    status, output, err = await self._get('/osd/crush/rule/ls')
+    if status != 200:
+      return status, None, error(status, err)
+    return output
 
   async def get_fs(self, name):
-    status, output, _ = await self._get('/fs/get', dict(fs_name=name))
+    status, output, err = await self._get('/fs/get', dict(fs_name=name))
     if status != 200:
+      self.logger.error(err)
       return 404, None, error(404, 'Filesystem `%s` is not found'%name)
-    state = output.get('output', {}).get('mdsmap', {}).get('info', {})
+    state = output.get('mdsmap', {}).get('info', {})
     if not state or len(state) == 0 or [v for v in state.values()][0].get('state') != 'up:active':
       return 503, None, error(503, 'Filesystem `%s` is not yet active'%name)
     return status, message(200, 'Filesystem `%s` is ready'%name), None
 
   async def list_fs(self):
-    _, msg, _ = await self._get('/fs/ls')
-    return 200, [fs['name'] for fs in msg.get('output', [])], None
+    _, output, _ = await self._get('/fs/ls')
+    return 200, [fs['name'] for fs in output], None
 
   async def clean_fs(self, name):
     status, _, err = await self.fail_mds(name)
@@ -36,14 +59,11 @@ class Ceph(Loggable, metaclass=Singleton):
     if status != 200:
       self.logger.error(err)
       return status, _, errmsg
-    status, _, err = await self.remove_data_pool(name)
-    if status != 200:
-      self.logger.error(err)
-      return status, _, errmsg
-    status, _, err = await self.remove_metadata_pool(name)
-    if status != 200:
-      self.logger.error(err)
-      return status, _, errmsg
+    resps = await multi([self.remove_data_pool(name), self.remove_metadata_pool(name)])
+    for status, _, err in resps:
+      if status != 200:
+        self.logger.error(err.get('status', ''))
+        return status, _, errmsg
     return status, message(status, 'Filesystem `%s` has been cleaned up'%name), _
 
   async def fail_mds(self, name):
@@ -80,14 +100,22 @@ class Ceph(Loggable, metaclass=Singleton):
     endpoint = self.ENDPOINT_BASE + endpoint
     if params:
       endpoint = url_concat(endpoint, params)
-    return await self.__cli.get(self.__host, self.__port, endpoint, accept='application/json',
-                                **headers)
+    status, out, err = await self.__cli.get(self.__host, self.__port, endpoint,
+                                             accept='application/json', **headers)
+    self.logger.debug('Output: %s'%out)
+    self.logger.debug('Error: %s'%err)
+    return status, (out.get('output') if status == 200 else None), \
+           (err.get('status', '') if status != 200 else None)
 
   async def _put(self, endpoint, params={}, body=None, **headers):
     endpoint = self.ENDPOINT_BASE + endpoint
     if params:
       endpoint = url_concat(endpoint, params)
-    return await self.__cli.put(self.__host, self.__port, endpoint, body, accept='application/json',
-                                **headers)
+    status, out, err = await self.__cli.put(self.__host, self.__port, endpoint, body,
+                                             accept='application/json', **headers)
+    self.logger.debug('Output: %s'%out)
+    self.logger.debug('Error: %s'%err)
+    return status, (out.get('output') if status == 200 else None), \
+           (err.get('status', '') if status != 200 else None)
 
 

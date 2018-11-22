@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import shlex
 import logging
 
 from tornado.httpclient import AsyncHTTPClient, HTTPError
@@ -79,17 +80,16 @@ class AsyncHttpClientWrapper:
                                  method=method, body=body,
                                  headers=dict(**self.__headers, **headers),
                                  allow_nonstandard_methods=True)
-      body = r.body.decode('utf-8')
+      body = r.body
       if body:
-        body = json_decode(body)
+        body = json_decode(str(r.body, 'utf-8'))
       return 200, body, None
     except json.JSONDecodeError as de:
       return 422, None, error(422, de.msg)
     except HTTPError as e:
       if e.code == 599:
-        return e.code, None, e.message
-      return e.code, None, error(e.code, e.response.body.decode('utf-8'))
+        return e.code, None, error(599, e.message)
+      return e.code, None, json_decode(str(e.response.body, 'utf-8'))
     except (ConnectionRefusedError, ConnectionResetError):
-      self.logger.warning('Connection refused/reset, retry after 3 seconds')
       sleep(3)
       return await self._fetch(host, port, endpoint, method, body, is_https, **headers)
