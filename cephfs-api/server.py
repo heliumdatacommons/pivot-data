@@ -66,8 +66,9 @@ class FileSystemsHandler(RequestHandler, Loggable):
       self.write(error(400, '`name` is required'))
       return
 
-    status, _, _ = await ceph.get_fs(name)
-    if status == 200:
+    cephfs_status, _, _ = await ceph.get_fs(name)
+    mds_status, _, _ = await marathon.get_container(name, 'cephfs')
+    if cephfs_status == 200 and mds_status == 200:
       self.set_status(409)
       self.write(error(409, '`%s` already exists'%name))
       return
@@ -86,20 +87,29 @@ class FileSystemsHandler(RequestHandler, Loggable):
 
     placement, rule = req.get('placement'), None
     if placement:
-      rule = validate_placement(placement)
+      rule = await validate_placement(placement)
       if not rule:
         self.set_status(400)
         self.write(error(400, 'Invalid placement value'))
         return
-
-    resps = await multi([ceph.create_data_pool('%s_data'%name, rule, data_n_replicas),
-                         ceph.create_data_pool('%s_metadata'%name, rule, metadata_n_replicas)])
-    for status, _, err in resps:
-      if status != 200:
-        self.logger.error(err)
-        self.set_status(500)
-        self.write(error(500, 'Failed to create CephFS volume `%s`'%name))
-        return
+    status, pools, err = await ceph.list_all_data_pools()
+    if status != 200:
+      self.set_status(status)
+      self.write(err)
+      return
+    create_pool_funcs = []
+    if '%s_data'%name not in pools:
+      create_pool_funcs += [ceph.create_data_pool('%s_data'%name, rule, data_n_replicas)]
+    if '%s_metadata'%name not in pools:
+      create_pool_funcs += [ceph.create_data_pool('%s_metadata'%name, rule, metadata_n_replicas)]
+    if len(create_pool_funcs) > 0:
+      resps = await multi(create_pool_funcs)
+      for status, _, err in resps:
+        if status != 200:
+          self.logger.error(err)
+          self.set_status(500)
+          self.write(error(500, 'Failed to create CephFS volume `%s`'%name))
+          return
 
     def volume(container_path, host_path, mode):
       return dict(containerPath=container_path, hostPath=host_path, mode=mode)

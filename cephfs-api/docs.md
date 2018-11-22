@@ -71,8 +71,6 @@ $ curl -X GET -H "Accept: application/json" "http://localhost:5000/api/v0.1/osd/
 ```console
 $ ceph osd pool create alpha_data 8 8 replicated region_us_east1_rule 0
 pool 'alpha_data' created'
-
-$ 
 ```
 
 #### 2.2 Set replication factor

@@ -1,4 +1,3 @@
-from multiprocessing import Lock
 from tornado.httputil import url_concat
 from tornado.gen import multi
 
@@ -14,10 +13,14 @@ class Ceph(Loggable, metaclass=Singleton):
     self.__cli = AsyncHttpClientWrapper()
     self.__host = host
     self.__port = port
-    self.__lock = Lock()
 
-  async def create_data_pool(self, name, rule='replicated_rule', n_replica=1, pg_num=8):
-    rule = not rule and 'replicated_rule'
+  async def list_all_data_pools(self):
+    status, pools, err = await self._get('/osd/pool/ls')
+    return status, status == 200 and pools, status != 200 and error(status, err)
+
+  async def create_data_pool(self, name, rule, n_replica=1, pg_num=8):
+    if not rule:
+      rule = 'replicated_rule'
     status, output, err = await self._put('/osd/pool/create', dict(pool=name,
                                                                    pg_num=pg_num, rule=rule))
     if status != 200:
@@ -31,14 +34,12 @@ class Ceph(Loggable, metaclass=Singleton):
 
   async def get_crush_rules(self):
     status, output, err = await self._get('/osd/crush/rule/ls')
-    if status != 200:
-      return status, None, error(status, err)
-    return output
+    return status, status == 200 and output, status != 200 and error(status, err)
 
   async def get_fs(self, name):
     status, output, err = await self._get('/fs/get', dict(fs_name=name))
     if status != 200:
-      self.logger.error(err)
+      self.logger.debug(err)
       return 404, None, error(404, 'Filesystem `%s` is not found'%name)
     state = output.get('mdsmap', {}).get('info', {})
     if not state or len(state) == 0 or [v for v in state.values()][0].get('state') != 'up:active':
@@ -104,8 +105,7 @@ class Ceph(Loggable, metaclass=Singleton):
                                              accept='application/json', **headers)
     self.logger.debug('Output: %s'%out)
     self.logger.debug('Error: %s'%err)
-    return status, (out.get('output') if status == 200 else None), \
-           (err.get('status', '') if status != 200 else None)
+    return status, status == 200 and out.get('output'), status != 200 and err.get('status', '')
 
   async def _put(self, endpoint, params={}, body=None, **headers):
     endpoint = self.ENDPOINT_BASE + endpoint
@@ -115,7 +115,6 @@ class Ceph(Loggable, metaclass=Singleton):
                                              accept='application/json', **headers)
     self.logger.debug('Output: %s'%out)
     self.logger.debug('Error: %s'%err)
-    return status, (out.get('output') if status == 200 else None), \
-           (err.get('status', '') if status != 200 else None)
+    return status, status == 200 and out.get('output'), status != 200 and err.get('status', '')
 
 

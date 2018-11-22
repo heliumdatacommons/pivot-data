@@ -45,8 +45,6 @@ class MarathonClient(Loggable, metaclass=Singleton):
     if status != 200:
       return status, msg, err
     _, deployments, _ = await self.__cli.get(master, port, '/v2/deployments')
-    self.logger.info(deployments)
-    self.logger.info(any(['/%s/%s'%(group, name) in d.get('affectedApps', []) for d in deployments]))
     while any(['/%s/%s'%(group, name) in d.get('affectedApps', []) for d in deployments]):
       _, deployments, _ = await self.__cli.get(master, port, '/v2/deployments')
       await sleep(1)
