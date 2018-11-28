@@ -14,6 +14,25 @@ class Ceph(Loggable, metaclass=Singleton):
     self.__host = host
     self.__port = port
 
+  async def get_crush_map(self):
+    status, output, err = await self._get('/osd/tree')
+    if status != 200:
+      return status, None, error(status, err)
+    crush_map = {}
+    nodes, node_map = output.get('nodes', []), {}
+    for n in nodes:
+      if n['type'] == 'root':
+        continue
+      node_map[n['id']] = n['type'], n['name']
+    for n in nodes:
+      if n['type'] == 'root':
+        continue
+      for c in n.get('children', []):
+        if c not in node_map:
+          continue
+        crush_map[node_map[c]] = n['type'], n['name']
+    return status, crush_map, None
+
   async def list_all_data_pools(self):
     status, pools, err = await self._get('/osd/pool/ls')
     return status, status == 200 and pools, status != 200 and error(status, err)
@@ -36,6 +55,12 @@ class Ceph(Loggable, metaclass=Singleton):
     status, output, err = await self._get('/osd/crush/rule/ls')
     return status, status == 200 and output, status != 200 and error(status, err)
 
+  async def get_crush_rule(self, name):
+    status, output, err = await self._get('/osd/pool/get', dict(pool=name, var='crush_rule'))
+    if status != 200:
+      return status, None, error(status, err)
+    return status, output['crush_rule'], None
+
   async def get_fs(self, name):
     status, output, err = await self._get('/fs/get', dict(fs_name=name))
     if status != 200:
@@ -44,7 +69,26 @@ class Ceph(Loggable, metaclass=Singleton):
     state = output.get('mdsmap', {}).get('info', {})
     if not state or len(state) == 0 or [v for v in state.values()][0].get('state') != 'up:active':
       return 503, None, error(503, 'Filesystem `%s` is not yet active'%name)
-    return status, message(200, 'Filesystem `%s` is ready'%name), None
+
+    async def get_placement(name):
+      resps = await multi([self.get_crush_rule('%s_data' % name),
+                           self.get_crush_map()])
+      for i, (status, locality, err) in enumerate(resps):
+        if status != 200:
+          return status, None, err
+        if i == 0:
+          crush_rule = locality
+        elif i == 1:
+          crush_map = locality
+      fs = crush_rule.split('_')[:-1]
+      type, name = fs[0], '-'.join(fs[1:])
+      locality = {type: name}
+      while (type, name) in crush_map:
+        type, name = crush_map[(type, name)]
+        locality[type] = name
+      return locality
+
+    return status, dict(name=name, placement=await get_placement(name)), None
 
   async def list_fs(self):
     _, output, _ = await self._get('/fs/ls')

@@ -114,6 +114,12 @@ class FileSystemsHandler(RequestHandler, Loggable):
     def volume(container_path, host_path, mode):
       return dict(containerPath=container_path, hostPath=host_path, mode=mode)
 
+    def placement_constraints():
+      const = [['preemptible', 'CLUSTER', 'false']]
+      if placement:
+        const += [str(placement.type), 'CLUSTER', str(placement.value)]
+      return const
+
     status, c, err = await marathon.create_container(name, 'cephfs', ceph_daemon_image, 'mds',
                                                      env=dict(CEPHFS_CREATE=1,
                                                               CEPHFS_NAME=name,
@@ -121,7 +127,8 @@ class FileSystemsHandler(RequestHandler, Loggable):
                                                      volumes=[
                                                        volume('/etc/ceph', cfg_dir, 'RW'),
                                                        volume('/var/lib/ceph', lib_dir, 'RW')
-                                                     ])
+                                                     ],
+                                                     constraints=placement_constraints())
     self.set_status(status)
     if status == 200:
       get_fs_status, _, _ = await self.__ceph.get_fs(name)
@@ -145,9 +152,9 @@ class FileSystemHandler(RequestHandler, Loggable):
       self.set_status(status)
       self.write(err)
       return
-    status, msg, err = await self.__ceph.get_fs(name)
+    status, fs, err = await self.__ceph.get_fs(name)
     self.set_status(status)
-    self.write(msg if status == 200 else err)
+    self.write(json_encode(fs) if status == 200 else err)
 
   async def delete(self, name):
     erasure = self.get_query_argument('erasure', False)
@@ -173,6 +180,7 @@ class FileSystemHandler(RequestHandler, Loggable):
       msg = message(status, 'Filesystem `%s` has been erased'%name)
     self.set_status(status)
     self.write(msg if status == 200 else err)
+
 
 if '__main__' == __name__:
   tornado.options.parse_command_line()

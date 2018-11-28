@@ -22,7 +22,7 @@ class MarathonClient(Loggable, metaclass=Singleton):
     return 200, 'MDS of `%s` is ready', None
 
   async def create_container(self, name, group, image, command, privileged=False, network='host',
-                             cpus=.5, mem=1024, env={}, volumes={}):
+                             cpus=.5, mem=1024, env={}, volumes={}, constraints=[]):
     req = dict(id='/%s/%s'%(group, name),
                cpus=cpus, mem=mem, disk=0,
                args=shlex.split(command),
@@ -36,6 +36,7 @@ class MarathonClient(Loggable, metaclass=Singleton):
                                           ],
                                           privileged=privileged,
                                           forcePullImage=True)),
+               constraints=list(constraints),
                upgradeStrategy=dict(minimumHealthCapacity=0, maximumOverCapacity=0))
     return await self.__cli.post(self.__masters[0], self.__port, '/v2/apps', req)
 
