@@ -117,7 +117,7 @@ class FileSystemsHandler(RequestHandler, Loggable):
     def placement_constraints():
       const = [['preemptible', 'CLUSTER', 'false']]
       if placement:
-        const += [str(placement.type), 'CLUSTER', str(placement.value)]
+        const += [[str(placement['type']), 'CLUSTER', str(placement['value'])]]
       return const
 
     status, c, err = await marathon.create_container(name, 'cephfs', ceph_daemon_image, 'mds',
