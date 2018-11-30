@@ -150,7 +150,7 @@ class VolumeRemoveHandler(RequestHandler, Loggable):
 
   - Delete the associated Ceph MDS
   - Delete the CephFS instance
-  - Erase the associated data and metadata pools
+  - Purge the associated data and metadata pools
 
   """
 

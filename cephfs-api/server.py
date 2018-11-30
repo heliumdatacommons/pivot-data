@@ -157,13 +157,13 @@ class FileSystemHandler(RequestHandler, Loggable):
     self.write(json_encode(fs) if status == 200 else err)
 
   async def delete(self, name):
-    erasure = self.get_query_argument('erasure', False)
-    if not isinstance(erasure, bool) and erasure.lower() not in ('true', 'false'):
+    purge = self.get_query_argument('purge', False)
+    if not isinstance(purge, bool) and purge.lower() not in ('true', 'false'):
       self.set_status(400)
-      self.write(error(400, 'Unrecognized `erasure` value: %s'%erasure))
+      self.write(error(400, 'Unrecognized `purge` value: %s'%purge))
       return
-    erasure = erasure and erasure.lower() == 'true'
-    self.logger.debug('Erasure?: %s'%erasure)
+    purge = purge and purge.lower() == 'true'
+    self.logger.debug('Purge?: %s'%purge)
     status, msg, err = await self.__marathon.delete_container(name, 'cephfs')
     if status == 404:
       self.logger.info('The MDS container for `%s` has already been deleted'%name)
@@ -172,12 +172,12 @@ class FileSystemHandler(RequestHandler, Loggable):
       self.write(err)
       return
     msg = message(status, 'Filesystem `%s` has been deleted'%name)
-    if erasure:
+    if purge:
       status, msg, err = await self.__ceph.clean_fs(name)
       while status != 200:
         status, msg, err = await self.__ceph.clean_fs(name)
         await sleep(1)
-      msg = message(status, 'Filesystem `%s` has been erased'%name)
+      msg = message(status, 'Filesystem `%s` has been purged'%name)
     self.set_status(status)
     self.write(msg if status == 200 else err)
 
