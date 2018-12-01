@@ -4,6 +4,40 @@ from tornado.gen import multi
 from util import AsyncHttpClientWrapper, Singleton, Loggable, message, error
 
 
+class FileSystem:
+
+  def __init__(self, name, placement=None, state='inactive'):
+    assert name is not None
+    assert placement is None or isinstance(placement, dict)
+    self.__name = str(name)
+    self.__placement = placement and dict(placement)
+    self.__state = str(state)
+
+  @property
+  def name(self):
+    return self.__name
+
+  @property
+  def placement(self):
+    return self.__placement and dict(self.__placement)
+
+  @property
+  def state(self):
+    return self.__state
+
+  @placement.setter
+  def placement(self, placement):
+    assert placement is None or isinstance(placement, dict)
+    self.__placement = dict(placement)
+
+  @state.setter
+  def state(self, state):
+    self.__state = str(state)
+
+  def to_render(self):
+    return dict(name=self.name, placement=self.placement or {}, state=self.state)
+
+
 class Ceph(Loggable, metaclass=Singleton):
 
   ENDPOINT_BASE = '/api/v0.1'
@@ -68,27 +102,27 @@ class Ceph(Loggable, metaclass=Singleton):
       return 404, None, error(404, 'Filesystem `%s` is not found'%name)
     state = output.get('mdsmap', {}).get('info', {})
     if not state or len(state) == 0 or [v for v in state.values()][0].get('state') != 'up:active':
-      return 503, None, error(503, 'Filesystem `%s` is not yet active'%name)
+      return 200, FileSystem(name), None
 
     async def get_placement(name):
       resps = await multi([self.get_crush_rule('%s_data' % name),
                            self.get_crush_map()])
-      for i, (status, locality, err) in enumerate(resps):
+      for i, (status, placement, err) in enumerate(resps):
         if status != 200:
           return status, None, err
         if i == 0:
-          crush_rule = locality
+          crush_rule = placement
         elif i == 1:
-          crush_map = locality
+          crush_map = placement
       fs = crush_rule.split('_')[:-1]
       type, name = fs[0], '-'.join(fs[1:])
-      locality = {type: name}
+      placement = {type: name}
       while (type, name) in crush_map:
         type, name = crush_map[(type, name)]
-        locality[type] = name
-      return locality
+        placement[type] = name
+      return placement
 
-    return status, dict(name=name, placement=await get_placement(name)), None
+    return status, FileSystem(name, await get_placement(name), 'active'), None
 
   async def list_fs(self):
     _, output, _ = await self._get('/fs/ls')

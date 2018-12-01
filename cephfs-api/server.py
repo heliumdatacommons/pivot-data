@@ -66,9 +66,9 @@ class FileSystemsHandler(RequestHandler, Loggable):
       self.write(error(400, '`name` is required'))
       return
 
-    cephfs_status, _, _ = await ceph.get_fs(name)
+    cephfs_status, fs, _ = await ceph.get_fs(name)
     mds_status, _, _ = await marathon.get_container(name, 'cephfs')
-    if cephfs_status == 200 and mds_status == 200:
+    if cephfs_status == 200 and fs.state == 'active' and mds_status == 200:
       self.set_status(409)
       self.write(error(409, '`%s` already exists'%name))
       return
@@ -99,9 +99,9 @@ class FileSystemsHandler(RequestHandler, Loggable):
       return
     create_pool_funcs = []
     if '%s_data'%name not in pools:
-      create_pool_funcs += [ceph.create_data_pool('%s_data'%name, rule, data_n_replicas)]
+      create_pool_funcs += ceph.create_data_pool('%s_data'%name, rule, data_n_replicas),
     if '%s_metadata'%name not in pools:
-      create_pool_funcs += [ceph.create_data_pool('%s_metadata'%name, rule, metadata_n_replicas)]
+      create_pool_funcs += ceph.create_data_pool('%s_metadata'%name, rule, metadata_n_replicas),
     if len(create_pool_funcs) > 0:
       resps = await multi(create_pool_funcs)
       for status, _, err in resps:
@@ -131,9 +131,9 @@ class FileSystemsHandler(RequestHandler, Loggable):
                                                      constraints=placement_constraints())
     self.set_status(status)
     if status == 200:
-      get_fs_status, _, _ = await self.__ceph.get_fs(name)
-      while get_fs_status != 200:
-        get_fs_status, _, _ = await self.__ceph.get_fs(name)
+      status, fs, _ = await self.__ceph.get_fs(name)
+      while status != 200 or fs.state != 'active':
+        status, fs, _ = await self.__ceph.get_fs(name)
         await sleep(1)
     elif status == 409:
       err = error(status, 'Filesystem `%s` already exists'%name)
@@ -147,14 +147,16 @@ class FileSystemHandler(RequestHandler, Loggable):
     self.__ceph = Ceph(options.ceph_api_host, options.ceph_api_port)
 
   async def get(self, name):
-    status, msg, err = await self.__marathon.get_container(name, 'cephfs')
-    if status != 200:
-      self.set_status(status)
-      self.write(err)
-      return
-    status, fs, err = await self.__ceph.get_fs(name)
-    self.set_status(status)
-    self.write(json_encode(fs) if status == 200 else err)
+    mds_status, msg, mds_err = await self.__marathon.get_container(name, 'cephfs')
+    fs_status, fs, fs_err = await self.__ceph.get_fs(name)
+    if fs_status == 200:
+      self.write(json_encode(fs.to_render()))
+    elif mds_status not in (200, 404):
+      self.set_status(mds_status)
+      self.write(json_encode(error(mds_status, mds_err)))
+    else:
+      self.set_status(fs_status)
+      self.write(json_encode(error(fs_status, fs_err)))
 
   async def delete(self, name):
     purge = self.get_query_argument('purge', False)
